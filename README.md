@@ -25,16 +25,20 @@ Easily launch a password spray using AWS Lambda across multiple regions, rotatin
 usage: **credking.py** [-h] --plugin PLUGIN [--threads THREADS] --userfile
                    USERFILE --passwordfile PASSWORDFILE --access_key
                    ACCESS_KEY --secret_access_key SECRET_ACCESS_KEY
+                   [--useragentfile USERAGENTFILE]
+                   [--oktadomain OKTADOMAIN]
 
 ```
 optional arguments:
-  -h, --help            				show this help message and exit
-  --plugin PLUGIN       				spraying plugin
-  --threads THREADS     				thread count (default: 1)
-  --userfile USERFILE   				username file
-  --passwordfile PASSWORDFILE 			password file
-  --access_key ACCESS_KEY 				aws access key
+  -h, --help                            show this help message and exit
+  --plugin PLUGIN                       spraying plugin
+  --threads THREADS                     thread count (default: 1)
+  --userfile USERFILE                   username file
+  --passwordfile PASSWORDFILE           password file
+  --access_key ACCESS_KEY               aws access key
   --secret_access_key SECRET_ACCESS_KEY aws secret access key
+  --useragentfile                       useragent file
+  --oktadomain OKTADOMAIN               Okta domain (Okta plugin only, format: site.okta.com)
 ```
          
 ## Installation ##

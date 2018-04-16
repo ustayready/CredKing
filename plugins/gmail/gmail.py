@@ -6,10 +6,10 @@ import re
 
 
 def lambda_handler(event, context):
-	return google_authenticate(event['username'], event['password'])
+	return google_authenticate(event['username'], event['password'], event['useragent'])
 
 
-def google_authenticate(username, password):
+def google_authenticate(username, password, useragent):
 	ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
 	data_response = {
@@ -31,7 +31,7 @@ def google_authenticate(username, password):
 		browser = mechanicalsoup.StatefulBrowser(
 			soup_config={'features': 'html'},
 			raise_on_404=True,
-			user_agent='Python-urllib/2.7',
+			user_agent=useragent,
 		)
 
 		page = browser.open('https://www.gmail.com')
@@ -90,7 +90,7 @@ def google_authenticate(username, password):
 					code = matches.group()
 					break
 				else:
-					code = '••'
+					code = '**'
 
 			data_response['code'] = code
 		elif u2f:
