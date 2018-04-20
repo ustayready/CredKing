@@ -50,6 +50,7 @@ The Gmail plugin does not require any additional arguments.
 
 ### Okta ###
 The Okta plugin adds a new required argument called oktadomain.
+
 usage: **credking.py** <usual arugments> --oktadomain org.okta.com
 
 ## Installation ##
@@ -92,9 +93,9 @@ CredKing generates a deployment zip file which the lambdas receive when they are
 $ pip install <pre-req> -t .
 ```
 
-#### Plugin specific arguments #####
+### Plugin specific arguments ###
 
-Optional plugin specific arguments can be specified with no modifications to credking.py, simply pass them as *--argumentname value*
+Plugin specific arguments can be specified with no modifications to credking.py, simply pass them as *--argumentname value*
 
 If your plugin requirements plugin-specific arguments, you can implement a validate function in the \_\_init\_\_.py file of your plugin directory that will be passed an dictionary of all optional arguments.
 
