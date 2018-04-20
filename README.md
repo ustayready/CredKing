@@ -51,7 +51,7 @@ The Gmail plugin does not require any additional arguments.
 ### Okta ###
 The Okta plugin adds a new required argument called oktadomain.
 
-usage: **credking.py** <usual arugments> --oktadomain org.okta.com
+usage: **credking.py** \<usual arugments\> --oktadomain org.okta.com
 
 ## Installation ##
 
