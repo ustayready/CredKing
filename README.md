@@ -4,11 +4,11 @@ CredKing
 	- [Benefits](#benefits)
 - [Basic Usage](#basic-usage)
 - [Plugin Usage](#plugin-usage)
-    - [Gmail](#Gmail)
-    - [Okta](#Okta)
+    - [Gmail](#gmail)
+    - [Okta](#okta)
 - [Installation](#installation)
 - [Development](#development)
-    - [Plugin-specific arguments](#Plugin-specific%20arguments)
+    - [Plugin specific arguments](#plugin-specific-arguments)
 
 ## Overview ##
 Easily launch a password spray using AWS Lambda across multiple regions, rotating IP addresses with each request.
@@ -43,7 +43,7 @@ Arguments:
   --useragentfile                       useragent file
 ```
 
-## Basic Usage ##
+## Plugin Usage ##
 
 ### Gmail ###
 The Gmail plugin does not require any additional arguments.
@@ -92,9 +92,9 @@ CredKing generates a deployment zip file which the lambdas receive when they are
 $ pip install <pre-req> -t .
 ```
 
-#### Plugin-specific arguments #####
+#### Plugin specific arguments #####
 
-Optional plugin-specific arguments can be specified with no modifications to credking.py, simply pass them as *--argumentname value*
+Optional plugin specific arguments can be specified with no modifications to credking.py, simply pass them as *--argumentname value*
 
 If your plugin requirements plugin-specific arguments, you can implement a validate function in the \_\_init\_\_.py file of your plugin directory that will be passed an dictionary of all optional arguments.
 
