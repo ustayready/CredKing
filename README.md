@@ -99,7 +99,7 @@ Plugin specific arguments can be specified with no modifications to credking.py,
 
 If your plugin requirements plugin-specific arguments, you can implement a validate function in the \_\_init\_\_.py file of your plugin directory that will be passed an dictionary of all optional arguments.
 
-Below is an example of plugin arugment validation used by the okta plugin's [__init__.py](plugins/okta/__init__.py).
+Below is an example of plugin arugment validation used by the okta plugin's [\_\_init\_\_.py](plugins/okta/__init__.py).
 
 ```python
 def validate(args):
