@@ -2,7 +2,8 @@ import botocore.vendored.requests as requests #As long as we're in AWS Lambda, t
 import json,datetime
 
 def lambda_handler(event, context):
-	return okta_authenticate(event['domain'], event['username'], event['password'], event['useragent'])
+	domain = event['args']['oktadomain']
+	return okta_authenticate(domain, event['username'], event['password'], event['useragent'])
 
 
 def okta_authenticate(domain, username, password, useragent):
@@ -23,7 +24,7 @@ def okta_authenticate(domain, username, password, useragent):
 		'cookies': [],
 	}
 
-	payload = {"username":username, "password":password, "options":{"warnBeforePasswordExpired":True, "multiOptionalFactorEnroll":True},"context":{"asdf":"asdf"}}
+	payload = {"username":username, "password":password, "options":{"warnBeforePasswordExpired":True, "multiOptionalFactorEnroll":True}}
 	url = "https://%s/api/v1/authn/" % domain
 	
 	try:

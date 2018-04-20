@@ -4,7 +4,7 @@ from zipfile import *
 from operator import itemgetter
 from threading import Lock, Thread
 import json, sys, random, string, ntpath, time, os, datetime, queue, shutil
-import boto3, argparse
+import boto3, argparse, importlib
 
 credentials = { 'accounts':[] }
 lambda_clients = {}
@@ -25,7 +25,7 @@ start_time = None
 end_time = None
 time_lapse = None
 
-def main(args):
+def main(args,pargs):
 	global start_time, end_time, time_lapse
 
 	thread_count = args.threads
@@ -34,17 +34,28 @@ def main(args):
 	password_file = args.passwordfile
 	access_key = args.access_key
 	secret_access_key = args.secret_access_key
-	okta_domain = args.oktadomain
-	if plugin.lower() == "okta" and okta_domain is None:
-		log_entry('Error: Okta plugin selected but domain was not supplied, provide the target domain with --oktadomain myorg.okta.com')
-		return
 	useragent_file = args.useragentfile
+
+	pluginargs = {}
+	for i in range(0,len(pargs)-1):
+		key = pargs[i].replace("--","")
+		pluginargs[key] = pargs[i+1]
 
 	start_time = datetime.datetime.utcnow()
 	log_entry('Execution started at: {}'.format(start_time))
 
 	# Prepare credential combinations into the queue
 	load_credentials(username_file, password_file, useragent_file)
+
+	# Check with plugin to make sure it has the data that it needs
+	validator = importlib.import_module('plugins.{}'.format(plugin))
+	if getattr(validator,"validate",None) is not None:
+		valid,errormsg = validator.validate(pluginargs)
+		if not valid:
+			log_entry(errormsg)
+			return
+	else:
+		log_entry("No validate function found for plugin: {}".format(plugin))
 
 	# Prepare the deployment package
 	zip_path = create_zip(plugin)
@@ -64,7 +75,7 @@ def main(args):
 				access_key=access_key,
 				secret_access_key=secret_access_key,
 				arn=arn,
-				okta_domain=okta_domain
+				args=pluginargs
 			)
 
 
@@ -96,7 +107,7 @@ def display_stats(start=True):
 		log_entry('Total Execution: {} seconds'.format(time_lapse))
 
 
-def start_spray(access_key, secret_access_key, arn, okta_domain=None):
+def start_spray(access_key, secret_access_key, arn, args):
 	while True:
 		item = q.get_nowait()
 
@@ -107,8 +118,7 @@ def start_spray(access_key, secret_access_key, arn, okta_domain=None):
 		payload['username'] = item['username']
 		payload['password'] = item['password']
 		payload['useragent'] = item['useragent']
-		if okta_domain is not None:
-			payload['domain'] = okta_domain
+		payload['args'] = args
 
 		invoke_lambda(
 			access_key=access_key,
@@ -415,6 +425,5 @@ if __name__ == '__main__':
 	parser.add_argument('--useragentfile', help='useragent file', required=False)
 	parser.add_argument('--access_key', help='aws access key', required=True)
 	parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
-	parser.add_argument('--oktadomain', help='Okta domain (Okta plugin only)', required=False)
-	args = parser.parse_args()
-	main(args)
+	args,pluginargs = parser.parse_known_args()
+	main(args,pluginargs)
