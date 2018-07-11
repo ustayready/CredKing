@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 from concurrent.futures import ThreadPoolExecutor
 from zipfile import *
 from operator import itemgetter

@@ -53,6 +53,9 @@ The Okta plugin adds a new required argument called oktadomain.
 
 usage: **credking.py** \<usual arugments\> --oktadomain org.okta.com
 
+### Microsoft Office 365 ###
+The Microsoft plugin does not require any additional arguments.
+
 ## Installation ##
 
 ### Ubuntu 16.04
@@ -62,6 +65,7 @@ You can install and run automatically using Python 3 with the following command:
 ```bash
 $ git clone https://github.com/ustayready/CredKing
 $ cd CredKing
+$ pip3 install -r requirements.txt
 ~/CredKing$ python3 credking.py
 ```
 
