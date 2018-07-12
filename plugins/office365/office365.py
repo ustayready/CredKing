@@ -101,6 +101,16 @@ def office_authenticate(username, password, useragent):
         resp = requests.post(authentication_url, data=data, headers=headers)
         if "ESTSAUTH" in resp.cookies.keys():
             data_response["success"] = True
+            try:
+                mfaMethodIndex = resp.content.index(b'authMethodId":"')
+                if mfaMethodIndex:
+                    mfaMethodIndex += 15
+                    endMfaIndex = resp.content.index(b'"', mfaMethodIndex)
+                    mfaMode = resp.content[mfaMethodIndex:endMfaIndex]
+                    data_response["2fa_enabled"] = True
+                    data_response["code"] = mfaMode.decode()
+            except ValueError as e:
+                data_response["2fa_enabled"] = False
     except Exception as e:
         data_response["error"] = e
 
