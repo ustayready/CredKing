@@ -108,18 +108,14 @@ def display_stats(start=True):
 
 
 def start_spray(access_key, secret_access_key, arn, args):
-	while True:
+	while not q.empty():
 		item = q.get_nowait()
-
-		if item is None:
-			break
-
+		
 		payload = {}
 		payload['username'] = item['username']
 		payload['password'] = item['password']
 		payload['useragent'] = item['useragent']
 		payload['args'] = args
-
 		invoke_lambda(
 			access_key=access_key,
 			secret_access_key=secret_access_key,
@@ -146,6 +142,7 @@ def load_credentials(user_file, password_file,useragent_file=None):
 
 	users = load_file(user_file)
 	passwords = load_file(password_file)
+
 	if useragent_file is not None:
 		useragents = load_file(useragent_file)
 	else:
@@ -158,7 +155,7 @@ def load_credentials(user_file, password_file,useragent_file=None):
 			cred['password'] = password
 			cred['useragent'] = random.choice(useragents)
 			credentials['accounts'].append(cred)
-
+	
 	for cred in credentials['accounts']:
 		q.put(cred)
 
