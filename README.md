@@ -53,6 +53,16 @@ The Okta plugin adds a new required argument called oktadomain.
 
 usage: **credking.py** \<usual arugments\> --oktadomain org.okta.com
 
+### Microsoft Online ###
+The Microsoft (`microsoft`) plugin can validate credentials against the live.com portal.
+
+This plugin does not require any additional arguments.
+
+### Office 365 ###
+The Office 365 (`office365`) validates credentials for Office 365 accounts, as well as determine the type of 2FA in place (if any). Note that even though a successful login occured, the 2FA request is not actually sent to the account as the 2FA request is loaded through javascript (which the requests library does not execute).
+
+This plugin does not require any additional arguments. 
+
 ## Installation ##
 
 ### Ubuntu 16.04
@@ -62,6 +72,7 @@ You can install and run automatically using Python 3 with the following command:
 ```bash
 $ git clone https://github.com/ustayready/CredKing
 $ cd CredKing
+$ pip3 install -r requirements.txt
 ~/CredKing$ python3 credking.py
 ```
 
