@@ -1,6 +1,7 @@
 import socket
 import ssl
 
+
 class NotConnectedException(Exception):
     def __init__(self, message=None, node=None):
         self.message = message
@@ -11,6 +12,7 @@ class DisconnectedException(Exception):
     def __init__(self, message=None, node=None):
         self.message = message
         self.node = node
+
 
 class Connector:
     def __init__(self):
@@ -56,6 +58,7 @@ class Connector:
 
         return data_buffer
 
+
 def passwordcheck(host, port, password):
     if len(password) > 0:
         result = None
@@ -73,10 +76,12 @@ def passwordcheck(host, port, password):
     else:
         print("Ignored blank password")
 
+
 def lambda_handler(event, context):
     port = event['args']['port']
     host = event['args']['host']
     return cobalt_strike_authenticate(host, port, event['password'])
+
 
 def cobalt_strike_authenticate(host, port, password):
     data_response = {
