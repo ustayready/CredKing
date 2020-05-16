@@ -60,7 +60,7 @@ def passwordcheck(host, port, password):
     if len(password) > 0:
         result = None
         conn = Connector()
-        conn.open(host, port)
+        conn.open(host, int(port))
         payload = bytearray(b"\x00\x00\xbe\xef") + len(password).to_bytes(1, "big", signed=True) + bytes(
             bytes(password, "ascii").ljust(256, b"A"))
         conn.send(payload)
@@ -75,21 +75,22 @@ def passwordcheck(host, port, password):
 
 def lambda_handler(event, context):
     port = event['args']['port']
-    host = event['args']['username'] # hosts are the usernames
-    password = event['args']['password']
-    return cobalt_strike_authenticate(host, port, password)
+    host = event['args']['host']
+    return cobalt_strike_authenticate(host, port, event['password'])
 
 def cobalt_strike_authenticate(host, port, password):
     data_response = {
         'password': password,
         'host': host,
         'port': port,
+        'username': 'notset',
+        'code': 'notset',
         'success': False
     }
     try:
         auth_check = passwordcheck(host, port, password)
         if auth_check:
-            data_response['success': True]
+            data_response['success'] = True
 
     except Exception as ex:
         data_response['error'] = ex
