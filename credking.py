@@ -381,9 +381,6 @@ def invoke_lambda(access_key, secret_access_key, arn, payload):
     if return_payload['success'] is True:
         clear_credentials(user, password)
         log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
-        f = open('wins', 'w+')
-        f.write()
-        f.close()
     else:
         log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
 
