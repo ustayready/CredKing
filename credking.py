@@ -416,9 +416,9 @@ def clean_up(access_key, secret_access_key, only_lambdas=True):
                             log_entry('Destroying {} in region: {}'.format(arn, client.meta.region_name))
                             client.delete_function(FunctionName=lambda_name)
                         except:
-                            log_entry('Failed to clean-up {} using client region {}'.format(arn, region))
+                            log_entry('Failed to clean-up {} using client region {}'.format(arn, client.meta.region_name))
         except:
-            log_entry('Failed to connect to client region {}'.format(region))
+            log_entry('Failed to connect to client region {}'.format(client.meta.region_name))
 
     filelist = [f for f in os.listdir('build') if f.endswith(".zip")]
     for f in filelist:
