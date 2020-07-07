@@ -337,7 +337,7 @@ def create_lambda(access_key, secret_access_key, zip_path, region_idx):
 				MemorySize=128,
 				Publish=True,
 				Role=role_name,
-				Runtime='python3.6',
+				Runtime='python3.7',
 				Timeout=8,
 				VpcConfig={
 				},
