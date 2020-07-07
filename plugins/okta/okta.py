@@ -1,4 +1,4 @@
-import botocore.vendored.requests as requests #As long as we're in AWS Lambda, this trick works for accessing requests
+import requests
 import json,datetime
 
 def lambda_handler(event, context):
