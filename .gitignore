@@ -1,1 +1,7 @@
-plugin/*/bin/
+plugins/*/bin/
+plugins/*/certifi*
+plugins/*/char*
+plugins/*/idna*
+plugins/*/requests*
+plugins/*/url*
+
