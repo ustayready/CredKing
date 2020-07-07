@@ -4,4 +4,6 @@ plugins/*/char*
 plugins/*/idna*
 plugins/*/requests*
 plugins/*/url*
+plugins/__pycache__/
+plugins/*/__pycache__/
 
