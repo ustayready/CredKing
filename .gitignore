@@ -6,4 +6,5 @@ plugins/*/requests*
 plugins/*/url*
 plugins/__pycache__/
 plugins/*/__pycache__/
-
+.idea/
+service-account.json
