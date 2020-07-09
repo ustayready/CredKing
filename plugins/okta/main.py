@@ -1,9 +1,12 @@
 import requests
 import json,datetime
 
-def lambda_handler(event, context):
-	domain = event['args']['oktadomain']
-	return okta_authenticate(domain, event['username'], event['password'], event['useragent'])
+def lambda_handler(event, context=None):
+	if isinstance(event,dict):
+		domain = event['args']['oktadomain']
+		return okta_authenticate(domain, event['username'], event['password'], event['useragent'])
+	else:
+		return json.dumps(event.get_json())
 
 
 def okta_authenticate(domain, username, password, useragent):

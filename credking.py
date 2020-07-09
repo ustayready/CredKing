@@ -318,7 +318,9 @@ def create_lambda(access_key, secret_access_key, zip_path, region_idx):
 	build_file = tail.split('.')[0]
 	plugin_name = build_file.split('_')[0]
 
-	handler_name = '{}.lambda_handler'.format(plugin_name)
+	# TODO: Figure out how to do dynamic source in GCP to revert this back
+	#handler_name = '{}.lambda_handler'.format(plugin_name)
+	handler_name = '{}.lambda_handler'.format('main')
 	zip_data = None
 
 	with open(zip_path,'rb') as fh:
