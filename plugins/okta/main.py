@@ -6,7 +6,26 @@ def lambda_handler(event, context=None):
 		domain = event['args']['oktadomain']
 		return okta_authenticate(domain, event['username'], event['password'], event['useragent'])
 	else:
-		return json.dumps(event.get_json())
+		# TODO: This is needed for GCP as the argument is flask.Request
+		request_json = event.get_json(silent=True)
+		request_args = event.args
+		username = ""
+		if request_json and 'username' in request_json:
+			username = request_json['username']
+			password = request_json['password']
+			useragent = request_json['useragent']
+			domain = request_json['args']['oktadomain']
+			return json.dumps(okta_authenticate(domain, username, password, useragent))
+		elif request_args and 'username' in request_args:
+			username = request_args['username']
+			password = request_args['password']
+			useragent = request_args['useragent']
+			domain = request_args['args']['oktadomain']
+			return json.dumps(okta_authenticate(domain, username, password, useragent))
+		else:
+			return f'Error'
+
+
 
 
 def okta_authenticate(domain, username, password, useragent):
