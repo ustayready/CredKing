@@ -8,6 +8,8 @@ from pprint import pprint
 from threading import Lock, Thread
 lock = Lock()
 import json, sys, random, string, ntpath, time, os, datetime, queue, shutil
+import re
+# TODO: Pass in service account file as an argument
 sa_file = 'service-account.json'
 credentials = service_account.Credentials.from_service_account_file(sa_file)
 
@@ -17,32 +19,21 @@ storage_service = build('storage','v1',credentials=credentials)
 
 
 #TODO Get Project
-#project = 'projects/canvas-network-282101'
-
-# Delete a file from a bucket
-#blob.delete()
-
-# Delete bucket
-#print(storage_service.buckets().delete(bucket="credkinggcp123456").execute())
+project = 'canvas-network-282101'
 
 
 #print(storage_service.buckets().list(project=project).execute())
 
-'''
-#TODO: Get Locations
-locations = service.projects().locations().list(name=project).execute()
+# Get Locations
+locations = service.projects().locations().list(name=f'projects/{project}').execute()
 print(len(locations['locations']))
 #print(json.dumps(locations,indent=2))
 print(locations['locations'][0])
 
 #print(service.projects().locations().functions().list(parent=locations['locations'][0]['name']).execute())
 
-#TODO: Generate Upload URL
-uploadURL = service.projects().locations().functions().generateUploadUrl(parent=locations['locations'][0]['name']).execute()
-print(uploadURL['uploadUrl'])
-'''
 
-#TODO: Upload Code
+# Uploading Code
 '''This needs to be done via the rest API via signed url - need to read up on what that is'''
 # Creating a bucket
 project = 'canvas-network-282101'
@@ -74,17 +65,50 @@ def create_zip(plugin):
 
 path = create_zip('okta')
 blob = bucket.blob('test.zip')
-print(blob.upload_from_filename(path))
+blob.upload_from_filename(path)
+sourceUrl = f'gs://{blob.bucket.name}/{blob.name}'
+
+# Create Function
+body =  {
+        "name": "projects/canvas-network-282101/locations/us-central1/functions/function-3",
+        "availableMemoryMb": 128,
+        "entryPoint": "lambda_handler",
+        "description": "Test function",
+        "timeout": "60s",
+        "runtime": "python37",
+        "ingressSettings": "ALLOW_ALL",
+        "maxInstances": 1,
+        "sourceArchiveUrl": "gs://credkinggcp123456/test.zip",
+        "httpsTrigger": {},
+        "vpcConnector": "",
+        "serviceAccountEmail": "test-608@canvas-network-282101.iam.gserviceaccount.com"
+        }
+#service.projects().locations().functions().create(location=locations['locations'][0]['name'],body=body).execute()
+
+# TODO: Get Status of the function and make sure that it is active
+
+# Call Function
+data = {"username": "test.test2", "password": "Spring2018", "useragent": "test", "args": {"oktadomain": "cardinalb2e.okta.com"}}
+body = {"data": json.dumps(data)}
+#body = {"data": "{\"username\": \"test.test1\", \"password\": \"Spring2018\", \"useragent\": \"test\", \"args\": {\"oktadomain\": \"cardinalb2e.okta.com\"}}"}
+print(service.projects().locations().functions().call(name="projects/canvas-network-282101/locations/us-central1/functions/function-3",body=body).execute())
 
 
+# Delete Function
+print(service.projects().locations().functions().delete(name="projects/canvas-network-282101/locations/us-central1/functions/function-3").execute())
 
-#TODO: Create Function 
+# Delete Code
+blob = bucket.blob('test.zip')
+blob.delete()
+bucket.delete()
 
-#TODO: Modify Pluging to work in GCP and AWS
 
-#TODO: Thread the above code
+# Delete Zip
+filelist = [ f for f in os.listdir('build') if f.endswith(".zip") ]
+for f in filelist:
+    os.remove(os.path.join('build', f))
 
-#TODO: Delete Function
+# TODO: Parameterize above
+# TODO: Make into functions with a main method
 
-#TODO: Delete Code
-
+# TODO: Thread the above code
