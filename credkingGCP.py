@@ -67,61 +67,87 @@ log_entry(len(locations['locations']))
 #print(json.dumps(locations,indent=2))
 log_entry(locations['locations'][0])
 
+def create_function(function,function_name, source_url,location_name):
+    # Create Function
+    body =  {
+            "name" : function_name,
+            "availableMemoryMb": 128,
+            "entryPoint": "lambda_handler",
+            "description": "CredKing Function",
+            "timeout": "60s",
+            "runtime": "python37",
+            "ingressSettings": "ALLOW_ALL",
+            "maxInstances": 1,
+            "sourceArchiveUrl": source_url,
+            "httpsTrigger": {},
+            "vpcConnector": "",
+            "serviceAccountEmail": credentials.service_account_email
+            }
+    #function = service.projects().locations().functions()
+    function_resp = function.create(location=location_name,body=body).execute()
+    log_entry(f"Function Resp: {function_resp}")
+
+    # TODO: Move the check out of this when threading
+    # Get Status of the function and make sure that it is active
+    while True:
+        sleep = 5
+        status = function.get(name=function_name).execute()
+        if status['status'] == 'ACTIVE':
+            break
+        else:
+            log_entry(f"Waiting {sleep} seconds for function to become ACTIVE")
+            time.sleep(sleep)
+    log_entry(f"Created Function: {function_name}")
+
+# Calling the create function command
 f_name = f'credking-function-{next(generate_random())}'
 function_name = f"{locations['locations'][0]['name']}/functions/{f_name}"
 log_entry(function_name)
+function = service.projects().locations().functions()
+log_entry(f"Creating Function: {function_name}")
+create_function(function,function_name,sourceURL,locations['locations'][0]['name'])
 
-# Create Function
-body =  {
-        "name" : function_name,
-        "availableMemoryMb": 128,
-        "entryPoint": "lambda_handler",
-        "description": "CredKing Function",
-        "timeout": "60s",
-        "runtime": "python37",
-        "ingressSettings": "ALLOW_ALL",
-        "maxInstances": 1,
-        "sourceArchiveUrl": sourceURL,
-        "httpsTrigger": {},
-        "vpcConnector": "",
-        "serviceAccountEmail": credentials.service_account_email
-        }
-function_resp = service.projects().locations().functions().create(location=locations['locations'][0]['name'],body=body).execute()
-log_entry(f"Function Resp: {function_resp}")
+def invoke_function(function,function_name,payload):
+    response = function.call(name=function_name, body=payload).execute()
+    return_payload = json.loads(response['result'])
 
-# Get Status of the function and make sure that it is active
-while True:
-    sleep = 5
-    status = service.projects().locations().functions().get(name=function_name).execute()
-    if status['status'] == 'ACTIVE':
-        break
+    user, password = return_payload['username'], return_payload['password']
+    code_2fa = return_payload['code']
+    if return_payload['success']:
+        # TODO: Add this back in when iterating
+        #clear_credentials(user, password)
+        log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
     else:
-        log_entry(f"Waiting {sleep} seconds for function to become ACTIVE")
-        time.sleep(sleep)
+        log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
 
 # Call Function
 data = {"username": "test.test2", "password": "Spring2018", "useragent": "test", "args": {"oktadomain": "cardinalb2e.okta.com"}}
 body = {"data": json.dumps(data)}
-#body = {"data": "{\"username\": \"test.test1\", \"password\": \"Spring2018\", \"useragent\": \"test\", \"args\": {\"oktadomain\": \"cardinalb2e.okta.com\"}}"}
-log_entry(service.projects().locations().functions().call(name=function_name,body=body).execute())
+#log_entry(service.projects().locations().functions().call(name=function_name,body=body).execute())
+invoke_function(function,function_name,body)
 
+def delete_function(function,function_name):
+    # Delete Function
+    log_entry(service.projects().locations().functions().delete(name=function_name).execute())
 
-# Delete Function
-log_entry(service.projects().locations().functions().delete(name=function_name).execute())
+def delete_bucket():
+    # Delete Code
+    blob = bucket.blob('test.zip')
+    blob.delete()
+    bucket.delete()
 
-# Delete Code
-blob = bucket.blob('test.zip')
-blob.delete()
-bucket.delete()
+def delete_zip():
+    # Delete Zip
+    filelist = [ f for f in os.listdir('build') if f.endswith(".zip") ]
+    for f in filelist:
+        os.remove(os.path.join('build', f))
+        log_entry(f"Removing file {f}")
 
-
-# Delete Zip
-filelist = [ f for f in os.listdir('build') if f.endswith(".zip") ]
-for f in filelist:
-    os.remove(os.path.join('build', f))
-    log_entry(f"Removing file {f}")
+delete_function(function,function_name)
+delete_bucket()
+delete_zip()
 
 # TODO: Parameterize above
-# TODO: Make into functions with a main method
+# TODO: Create a main method
 
 # TODO: Thread the above code
