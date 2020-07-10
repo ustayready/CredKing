@@ -29,9 +29,9 @@ def generate_random():
 	   seed += 1
 
 # Uploading Code
-bucket_name = f"credking_{next(generate_random())}"
 
 # Creating a bucket
+bucket_name = f"credking_{next(generate_random())}"
 body = {'name': bucket_name}
 log_entry(storage_service.buckets().insert(project=credentials.project_id,predefinedAcl="projectPrivate",body=body).execute())
 
@@ -67,17 +67,16 @@ log_entry(len(locations['locations']))
 #print(json.dumps(locations,indent=2))
 log_entry(locations['locations'][0])
 
-function_name = 'function-3'
-name = f"{locations['locations'][0]['name']}/functions/{function_name}"
-log_entry(name)
+f_name = f'credking-function-{next(generate_random())}'
+function_name = f"{locations['locations'][0]['name']}/functions/{f_name}"
+log_entry(function_name)
 
 # Create Function
 body =  {
-        #"name": "projects/canvas-network-282101/locations/us-central1/functions/function-3",
-        "name" : name,
+        "name" : function_name,
         "availableMemoryMb": 128,
         "entryPoint": "lambda_handler",
-        "description": "Test function",
+        "description": "CredKing Function",
         "timeout": "60s",
         "runtime": "python37",
         "ingressSettings": "ALLOW_ALL",
@@ -87,12 +86,13 @@ body =  {
         "vpcConnector": "",
         "serviceAccountEmail": credentials.service_account_email
         }
-log_entry(service.projects().locations().functions().create(location=locations['locations'][0]['name'],body=body).execute())
+function_resp = service.projects().locations().functions().create(location=locations['locations'][0]['name'],body=body).execute()
+log_entry(f"Function Resp: {function_resp}")
 
 # Get Status of the function and make sure that it is active
 while True:
     sleep = 5
-    status = service.projects().locations().functions().get(name="projects/canvas-network-282101/locations/us-central1/functions/function-3").execute()
+    status = service.projects().locations().functions().get(name=function_name).execute()
     if status['status'] == 'ACTIVE':
         break
     else:
@@ -103,11 +103,11 @@ while True:
 data = {"username": "test.test2", "password": "Spring2018", "useragent": "test", "args": {"oktadomain": "cardinalb2e.okta.com"}}
 body = {"data": json.dumps(data)}
 #body = {"data": "{\"username\": \"test.test1\", \"password\": \"Spring2018\", \"useragent\": \"test\", \"args\": {\"oktadomain\": \"cardinalb2e.okta.com\"}}"}
-log_entry(service.projects().locations().functions().call(name="projects/canvas-network-282101/locations/us-central1/functions/function-3",body=body).execute())
+log_entry(service.projects().locations().functions().call(name=function_name,body=body).execute())
 
 
 # Delete Function
-log_entry(service.projects().locations().functions().delete(name="projects/canvas-network-282101/locations/us-central1/functions/function-3").execute())
+log_entry(service.projects().locations().functions().delete(name=function_name).execute())
 
 # Delete Code
 blob = bucket.blob('test.zip')
