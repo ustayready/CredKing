@@ -22,21 +22,24 @@ def log_entry(entry):
     ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     print(f'[{ts}] {entry}')
 
-# Uploading Code
-
-# Creating a bucket
-body = {'name':'credkinggcp123456'}
-log_entry(storage_service.buckets().insert(project=credentials.project_id,predefinedAcl="projectPrivate",body=body).execute())
-
-# Uploading a file from a created bucket
-storage_client = storage.Client(project=credentials.project_id,credentials=credentials)
-bucket = storage_client.bucket('credkinggcp123456')
-
 def generate_random():
 	seed = random.getrandbits(32)
 	while True:
 	   yield seed
 	   seed += 1
+
+# Uploading Code
+bucket_name = f"credking_{next(generate_random())}"
+
+# Creating a bucket
+body = {'name': bucket_name}
+log_entry(storage_service.buckets().insert(project=credentials.project_id,predefinedAcl="projectPrivate",body=body).execute())
+
+# Uploading a file from a created bucket
+storage_client = storage.Client(project=credentials.project_id,credentials=credentials)
+bucket = storage_client.bucket(bucket_name)
+
+
 
 def create_zip(plugin):
     plugin_path = 'plugins/{}/'.format(plugin)
