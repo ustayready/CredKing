@@ -4,6 +4,7 @@ import json
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from google.cloud import storage
+from time import time
 from pprint import pprint
 from threading import Lock, Thread
 lock = Lock()
@@ -40,7 +41,7 @@ project = 'canvas-network-282101'
 
 # Creating a bucket
 body = {'name':'credkinggcp123456'}
-#print(storage_service.buckets().insert(project=project,predefinedAcl="projectPrivate",body=body).execute())
+print(storage_service.buckets().insert(project=project,predefinedAcl="projectPrivate",body=body).execute())
 
 # Uploading a file from a created bucket
 storage_client = storage.Client(project=project,credentials=credentials)
@@ -83,9 +84,15 @@ body =  {
         "vpcConnector": "",
         "serviceAccountEmail": "test-608@canvas-network-282101.iam.gserviceaccount.com"
         }
-#service.projects().locations().functions().create(location=locations['locations'][0]['name'],body=body).execute()
+service.projects().locations().functions().create(location=locations['locations'][0]['name'],body=body).execute()
 
-# TODO: Get Status of the function and make sure that it is active
+# Get Status of the function and make sure that it is active
+while True:
+    status = service.projects().locations().functions().get(name="projects/canvas-network-282101/locations/us-central1/functions/function-3").execute()
+    if status['status'] == 'ACTIVE':
+        break
+    else:
+        time.sleep(5)
 
 # Call Function
 data = {"username": "test.test2", "password": "Spring2018", "useragent": "test", "args": {"oktadomain": "cardinalb2e.okta.com"}}
