@@ -18,27 +18,18 @@ service = build('cloudfunctions','v1',credentials=credentials)
 
 storage_service = build('storage','v1',credentials=credentials)
 
-
-#TODO Get Project
-project = 'canvas-network-282101'
-
 def log_entry(entry):
     ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     print(f'[{ts}] {entry}')
 
-#print(service.projects().locations().functions().list(parent=locations['locations'][0]['name']).execute())
-
-
 # Uploading Code
-# Creating a bucket
-project = 'canvas-network-282101'
 
 # Creating a bucket
 body = {'name':'credkinggcp123456'}
-log_entry(storage_service.buckets().insert(project=project,predefinedAcl="projectPrivate",body=body).execute())
+log_entry(storage_service.buckets().insert(project=credentials.project_id,predefinedAcl="projectPrivate",body=body).execute())
 
 # Uploading a file from a created bucket
-storage_client = storage.Client(project=project,credentials=credentials)
+storage_client = storage.Client(project=credentials.project_id,credentials=credentials)
 bucket = storage_client.bucket('credkinggcp123456')
 
 def generate_random():
@@ -68,7 +59,7 @@ def create_bucket(plugin):
 sourceURL = create_bucket('okta')
 
 # Get Locations
-locations = service.projects().locations().list(name=f'projects/{project}').execute()
+locations = service.projects().locations().list(name=f'projects/{credentials.project_id}').execute()
 log_entry(len(locations['locations']))
 #print(json.dumps(locations,indent=2))
 log_entry(locations['locations'][0])
