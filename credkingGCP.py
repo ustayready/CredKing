@@ -11,7 +11,6 @@ from threading import Lock, Thread
 lock = Lock()
 import json, sys, random, string, ntpath, time, os, datetime, queue, shutil
 import re, argparse, importlib
-# TODO: Pass in service account file as an argument
 _service_account_email = ""
 credentials = {'accounts': []}
 
@@ -76,19 +75,24 @@ def main(args,pargs):
     for x in functions:
         check_function(locations.functions(),x)
 
-    # Call Function
-    data = {"username": "test.test2", "password": "Spring2018", "useragent": "test",
-            "args": {"oktadomain": "cardinalb2e.okta.com"}}
-    body = {"data": json.dumps(data)}
-    # log_entry(service.projects().locations().functions().call(name=function_name,body=body).execute())
+    with ThreadPoolExecutor(max_workers=len(functions)) as executor:
+        for function_name in functions:
+            log_entry('Launching spray using {}...'.format(function_name))
+            executor.submit(
+                start_spray,
+                sa_credentials=sa_credentials,
+                function_name=function_name,
+                args=pluginargs
+            )
+
     for function_name in functions:
-        #invoke_function(locations.functions(), function_name, body)
-        start_spray(locations.functions(),function_name,pluginargs)
         delete_function(locations.functions(), function_name)
     delete_bucket(bucket)
     delete_zip()
 
-def start_spray(function,function_name,args):
+def start_spray(sa_credentials,function_name,args):
+    service = build('cloudfunctions', 'v1', credentials=sa_credentials)
+    function = service.projects().locations().functions()
     while True:
         item = q.get_nowait()
 
@@ -153,7 +157,6 @@ def create_functions(sa_credentials,locations,project_id,source_url,thread_count
                 executor.submit(
                     create_function,
                     sa_credentials=sa_credentials,
-                    function=locations.functions(),
                     project_id=project_id,
                     source_url=source_url,
                     location=location_names[x]
@@ -206,7 +209,7 @@ def create_bucket(bucket,plugin):
     object_url = f'gs://{blob.bucket.name}/{blob.name}'
     return object_url
 
-def create_function(sa_credentials, function, project_id, source_url,location):
+def create_function(sa_credentials, project_id, source_url,location):
     service = build('cloudfunctions', 'v1', credentials=sa_credentials)
     # Calling the create function command
     log_entry(location)
@@ -232,8 +235,8 @@ def create_function(sa_credentials, function, project_id, source_url,location):
             "vpcConnector": "",
             "serviceAccountEmail": _service_account_email
             }
-    function2 = service.projects().locations().functions()
-    function_resp = function2.create(location=location_name,body=body).execute()
+    function = service.projects().locations().functions()
+    function_resp = function.create(location=location_name,body=body).execute()
     log_entry(f"Function Resp: {function_resp}")
 
     return function_name
@@ -268,9 +271,6 @@ def delete_zip():
         os.remove(os.path.join('build', f))
         log_entry(f"Removing file {f}")
 
-# TODO: Parameterize above
-
-# TODO: Thread the above code
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
