@@ -23,6 +23,8 @@ credentials = {'accounts': []}
 lock = Lock()
 q = queue.Queue()
 
+_service_account_email = ""
+
 
 def main(args, pargs):
     global start_time, end_time, time_lapse
@@ -36,18 +38,29 @@ def main(args, pargs):
     environments = args.env
     gcp_enabled = False
     aws_enabled = False
+    sa_file = None
+    access_key = None
+    secret_access_key = None
 
     for env in environments:
         if env == "aws":
             # GCP Required Fields
             sa_file = args.sa_creds_file
-            print("Contains all the necessary GCP Fields")
+            if sa_file is not None:
+                print("Contains all the necessary GCP Fields")
+            else:
+                print("Field requirements are not met")
+                sys.exit(0)
             aws_enabled = True
         elif env == "gcp":
             # AWS Required Fields
             access_key = args.access_key
             secret_access_key = args.secret_access_key
-            print("Contains all the necessary AWS Fields")
+            if access_key is not None and secret_access_key is not None:
+                print("Contains all the necessary AWS Fields")
+            else:
+                print("Field requirements are not met")
+                sys.exit(0)
             gcp_enabled = True
         else:
             print("Field requirements are not met")
@@ -76,9 +89,13 @@ def main(args, pargs):
         threads = len(credentials['accounts'])
 
     print(math.floor(thread_count/len(environments)))
-    threads = math.floor(thread_count/len(environments))
-    log_entry("")
+    total_threads = threads
+    threads = math.floor(total_threads/len(environments))
+    log_entry(f"Number of threads per environment: {threads}")
 
+    functions = []
+    service = None
+    bucket = None
     if gcp_enabled:
         sa_credentials = credkingGCP.service_account.Credentials.from_service_account_file(sa_file)
         # TODO: Evaluate if this variable is needed
@@ -100,24 +117,75 @@ def main(args, pargs):
         source_url = credkingGCP.create_bucket(bucket, 'okta')
 
         locations = service.projects().locations()
-        functions = credkingGCP.create_functions(sa_credentials, locations, sa_credentials.project_id, source_url, thread_count)
+        functions = credkingGCP.create_functions(sa_credentials, locations, sa_credentials.project_id, source_url, threads)
 
         for x in functions:
             credkingGCP.check_function(locations.functions(), x)
+    arns = []
+    if aws_enabled:
+        # Prepare the deployment package
+        zip_path = credkingAWS.create_zip(plugin)
 
+        # Create lambdas based on thread count
+        arns = credkingAWS.load_lambdas(access_key, secret_access_key, threads, zip_path)
 
+    # Start Spray
 
-    '''
-    sa_credentials = credkingGCP.service_account.Credentials.from_service_account_file(sa_file)
-    storage_service = credkingGCP.build('storage', 'v1', credentials=sa_credentials)
+    #with ThreadPoolExecutor(max_workers=total_threads) as executor:
+    #while True:
+    for item in q.queue:
+        '''
+        item = None
+        if q.empty():
+            break
+        else:
+            item = q.get()
+        if item is None:
+            break
+        '''
+        #random = bool(random.getrandbits(4))
+        print(arns)
+        print(functions)
+        serverlessList = arns + functions
 
-    # Creating a bucket
-    bucket_name = f"credking_{next(credkingGCP.generate_random())}"
-    body = {'name': bucket_name}
-    credkingGCP.log_entry(
-        storage_service.buckets().insert(project=sa_credentials.project_id, predefinedAcl="projectPrivate",
-                                         body=body).execute())
-    '''
+        for serverless in serverlessList:
+            if str(serverless).startswith('arn'):
+                log_entry('Launching spray using {}...'.format(serverless))
+                credkingAWS.start_spray(access_key=access_key,secret_access_key=secret_access_key,arn=serverless,args=pluginargs,item=item)
+                '''
+                executor.submit(
+                    credkingAWS.start_spray,
+                    access_key=access_key,
+                    secret_access_key=secret_access_key,
+                    arn=arn,
+                    args=pluginargs,
+                    item=item
+                )
+                '''
+            else:
+                log_entry('Launching spray using {}...'.format(serverless))
+                credkingGCP.start_spray(sa_credentials=sa_credentials,function_name=serverless,args=pluginargs,item=item)
+                '''
+                executor.submit(
+                    credkingGCP.start_spray,
+                    sa_credentials=sa_credentials,
+                    function_name=function_name,
+                    args=pluginargs,
+                    item=item
+                )
+                '''
+        #q.task_done()
+
+    if gcp_enabled:
+        for function_name in functions:
+            credkingGCP.delete_function(service.projects().locations().functions(), function_name)
+        credkingGCP.delete_bucket(bucket)
+        credkingGCP.delete_zip()
+
+    if aws_enabled:
+        # Remove AWS resources and build zips
+        credkingAWS.clean_up(access_key, secret_access_key, only_lambdas=True)
+
 
 def generate_random():
     seed = random.getrandbits(32)

