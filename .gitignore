@@ -9,3 +9,4 @@ plugins/*/__pycache__/
 .idea/
 service-account.json
 venv/
+__pycache__/
