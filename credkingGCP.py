@@ -1,6 +1,4 @@
 #!/usr/bin/python3
-import requests
-import json
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from google.cloud import storage
@@ -17,6 +15,7 @@ credentials = {'accounts': []}
 lock = Lock()
 q = queue.Queue()
 
+
 def main(args,pargs):
     global start_time, end_time, time_lapse
 
@@ -29,8 +28,6 @@ def main(args,pargs):
     print(args.env)
     sys.exit(0)
 
-
-    sys.exit(0)
 
     pluginargs = {}
     for i in range(0, len(pargs) - 1):
@@ -115,6 +112,7 @@ def start_spray(sa_credentials,function_name,args):
 
         q.task_done()
 
+
 def load_credentials(user_file, password_file,useragent_file=None):
 	log_entry('Loading credentials from {} and {}'.format(user_file, password_file))
 
@@ -136,9 +134,11 @@ def load_credentials(user_file, password_file,useragent_file=None):
 	for cred in credentials['accounts']:
 		q.put(cred)
 
+
 def load_file(filename):
 	if filename:
 		return [line.strip() for line in open(filename, 'r')]
+
 
 def create_functions(sa_credentials,locations,project_id,source_url,thread_count):
     # Get Locations
@@ -189,6 +189,7 @@ def log_entry(entry):
     ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     print(f'[{ts}] {entry}')
 
+
 def generate_random():
     seed = random.getrandbits(32)
     while True:
@@ -207,12 +208,14 @@ def create_zip(plugin):
 
     return build_zip
 
+
 def create_bucket(bucket,plugin):
     path = create_zip(plugin)
     blob = bucket.blob('test.zip')
     blob.upload_from_filename(path)
     object_url = f'gs://{blob.bucket.name}/{blob.name}'
     return object_url
+
 
 def create_function(sa_credentials, project_id, source_url,location):
     service = build('cloudfunctions', 'v1', credentials=sa_credentials)
@@ -246,6 +249,7 @@ def create_function(sa_credentials, project_id, source_url,location):
 
     return function_name
 
+
 def invoke_function(function,function_name,payload):
     response = function.call(name=function_name, body=payload).execute()
     return_payload = json.loads(response['result'])
@@ -259,15 +263,18 @@ def invoke_function(function,function_name,payload):
     else:
         log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
 
+
 def delete_function(function,function_name):
     # Delete Function
     log_entry(function.delete(name=function_name).execute())
+
 
 def delete_bucket(bucket):
     # Delete Code
     blob = bucket.blob('test.zip')
     blob.delete()
     bucket.delete()
+
 
 def delete_zip():
     # Delete Zip
