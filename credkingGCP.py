@@ -91,6 +91,17 @@ def main(args, pargs):
     delete_zip()
 
 
+def clear_credentials(username, password):
+    global credentials
+    c = {}
+    c['accounts'] = []
+    for x in credentials['accounts']:
+        if not x['username'] == username:
+            x['success'] = True
+            c['accounts'].append(x)
+    credentials = c
+
+
 def start_spray(sa_credentials, function_name, args):
     service = build('cloudfunctions', 'v1', credentials=sa_credentials)
     function = service.projects().locations().functions()
@@ -256,8 +267,7 @@ def invoke_function(function, function_name, payload):
     user, password = return_payload['username'], return_payload['password']
     code_2fa = return_payload['code']
     if return_payload['success']:
-        # TODO: Add this back in when iterating
-        # clear_credentials(user, password)
+        clear_credentials(user, password)
         log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
     else:
         log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
