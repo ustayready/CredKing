@@ -101,7 +101,6 @@ def display_stats(start=True):
 		log_entry('User/Password Combinations: {}'.format(len(credentials['accounts'])))
 		log_entry('Total Regions Available: {}'.format(len(regions)))
 		log_entry('Total Lambdas: {}'.format(lambda_count))
-		
 
 	if end_time and not start:
 		log_entry('End Time: {}'.format(end_time))
@@ -149,38 +148,6 @@ def start_spray(access_key, secret_access_key, arn, args):
 
 		q.task_done()
 '''
-
-def clear_credentials(username, password):
-	global credentials
-	c = {}
-	c['accounts'] = []
-	for x in credentials['accounts']:
-		if not x['username'] == username:
-			x['success'] = True
-			c['accounts'].append(x)
-	credentials = c
-
-
-def load_credentials(user_file, password_file,useragent_file=None):
-	log_entry('Loading credentials from {} and {}'.format(user_file, password_file))
-
-	users = load_file(user_file)
-	passwords = load_file(password_file)
-	if useragent_file is not None:
-		useragents = load_file(useragent_file)
-	else:
-		useragents = ["Python CredKing (https://github.com/ustayready/CredKing)"]
-
-	for user in users:
-		for password in passwords:
-			cred = {}
-			cred['username'] = user
-			cred['password'] = password
-			cred['useragent'] = random.choice(useragents)
-			credentials['accounts'].append(cred)
-
-	for cred in credentials['accounts']:
-		q.put(cred)
 
 
 def load_file(filename):
