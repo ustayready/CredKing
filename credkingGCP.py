@@ -8,6 +8,7 @@ from pprint import pprint
 from threading import Lock, Thread
 import json, sys, random, string, ntpath, time, os, datetime, queue, shutil
 import re, argparse, importlib
+from credking_core import log_entry
 
 _service_account_email = ""
 credentials = {'accounts': []}
@@ -25,6 +26,7 @@ def main(args, pargs):
     password_file = args.passwordfile
     sa_file = args.sa_creds_file
     user_agent_file = args.useragentfile
+    print(args.env)
 
     pluginargs = {}
     for i in range(0, len(pargs) - 1):
@@ -106,6 +108,7 @@ def start_spray(sa_credentials, function_name, args, item):
     function = service.projects().locations().functions()
     if item is None:
         return
+    print(item)
 
     payload = {}
     payload['username'] = item['username']
@@ -196,7 +199,7 @@ def create_functions(sa_credentials, locations, project_id, source_url, thread_c
                 )
             )
     for x in function_names:
-        log_entry(x.result())
+        print(x.result())
     return [x.result() for x in function_names]
 
 
@@ -211,11 +214,6 @@ def check_function(function, function_name):
             log_entry(f"Waiting {sleep} seconds for function to become ACTIVE")
             time.sleep(sleep)
     log_entry(f"Created Function: {function_name}")
-
-
-def log_entry(entry):
-    ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-    log_entry(f'[{ts}] {entry}')
 
 
 def generate_random():
@@ -286,9 +284,9 @@ def invoke_function(function, function_name, payload):
     code_2fa = return_payload['code']
     if return_payload['success']:
         # clear_credentials(user, password)
-        log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
+        print('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
     else:
-        log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
+        print('(FAILED) {} / {} -> Failed.'.format(user, password))
 
 
 def delete_function(function, function_name):

@@ -8,6 +8,7 @@ from threading import Lock
 import queue
 import random
 import math
+from credking_core import log_entry
 
 # GCP Locations
 location_names = ["us-central1", "us-east1", "us-east4", "europe-west1", "asia-east2"]
@@ -88,6 +89,7 @@ def main(args, pargs):
     elif thread_count > len(credentials['accounts']):
         threads = len(credentials['accounts'])
 
+    print(math.floor(thread_count/len(environments)))
     total_threads = threads
     threads = math.floor(total_threads/len(environments))
     log_entry(f"Number of threads per environment: {threads}")
@@ -198,12 +200,6 @@ def load_credentials(user_file, password_file, useragent_file=None):
 
     for cred in credentials['accounts']:
         q.put(cred)
-
-
-def log_entry(entry):
-    ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-    print('[{}] {}'.format(ts, entry))
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
