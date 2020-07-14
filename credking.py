@@ -88,7 +88,6 @@ def main(args, pargs):
     elif thread_count > len(credentials['accounts']):
         threads = len(credentials['accounts'])
 
-    print(math.floor(thread_count/len(environments)))
     total_threads = threads
     threads = math.floor(total_threads/len(environments))
     log_entry(f"Number of threads per environment: {threads}")

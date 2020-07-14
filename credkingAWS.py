@@ -394,14 +394,14 @@ def invoke_lambda(access_key, secret_access_key, arn, payload):
 	if return_payload['success'] == True:
 		#clear_credentials(user, password)
 
-		print('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
+		log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
 	else:
-		print('(FAILED) {} / {} -> Failed.'.format(user, password))
+		log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
 		
 
 def log_entry(entry):
 	ts = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-	print('[{}] {}'.format(ts, entry))
+	log_entry('[{}] {}'.format(ts, entry))
 
 
 def clean_up(access_key, secret_access_key, only_lambdas=True):
