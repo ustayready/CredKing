@@ -106,6 +106,7 @@ def display_stats(start=True):
 		log_entry('End Time: {}'.format(end_time))
 		log_entry('Total Execution: {} seconds'.format(time_lapse))
 
+
 def start_spray(access_key, secret_access_key, arn, args, item):
 	if item is None:
 		return
@@ -122,6 +123,7 @@ def start_spray(access_key, secret_access_key, arn, args, item):
 		arn=arn,
 		payload=payload,
 	)
+
 
 '''
 def start_spray(access_key, secret_access_key, arn, args):
@@ -146,7 +148,6 @@ def start_spray(access_key, secret_access_key, arn, args):
 
 		q.task_done()
 '''
-
 
 def clear_credentials(username, password):
 	global credentials

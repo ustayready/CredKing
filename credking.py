@@ -130,11 +130,23 @@ def main(args, pargs):
         arns = credkingAWS.load_lambdas(access_key, secret_access_key, threads, zip_path)
 
     # Start Spray
+    serverlessList = arns + functions
+    with ThreadPoolExecutor(max_workers=len(serverlessList)) as executor:
+        for serverless in serverlessList:
+            log_entry(f'Launching spray {serverless}...')
+            # access_key, secret_access_key, args, sa_credentials, item, serverless
+            executor.submit(start_spray,
+                            access_key=access_key,
+                            secret_access_key=secret_access_key,
+                            args=pluginargs,
+                            sa_credentials=sa_credentials,
+                            serverless=serverless
+                            )
 
+    '''
     #with ThreadPoolExecutor(max_workers=total_threads) as executor:
     #while True:
     for item in q.queue:
-        '''
         item = None
         if q.empty():
             break
@@ -142,39 +154,35 @@ def main(args, pargs):
             item = q.get()
         if item is None:
             break
-        '''
-        #random = bool(random.getrandbits(4))
-        print(arns)
-        print(functions)
-        serverlessList = arns + functions
 
         for serverless in serverlessList:
             if str(serverless).startswith('arn'):
                 log_entry('Launching spray using {}...'.format(serverless))
                 credkingAWS.start_spray(access_key=access_key,secret_access_key=secret_access_key,arn=serverless,args=pluginargs,item=item)
-                '''
-                executor.submit(
-                    credkingAWS.start_spray,
-                    access_key=access_key,
-                    secret_access_key=secret_access_key,
-                    arn=arn,
-                    args=pluginargs,
-                    item=item
-                )
-                '''
+                
+                #executor.submit(
+                #    credkingAWS.start_spray,
+                #    access_key=access_key,
+                #    secret_access_key=secret_access_key,
+                #    arn=arn,
+                #    args=pluginargs,
+                #    item=item
+                #)
+                
             else:
                 log_entry('Launching spray using {}...'.format(serverless))
                 credkingGCP.start_spray(sa_credentials=sa_credentials,function_name=serverless,args=pluginargs,item=item)
-                '''
-                executor.submit(
-                    credkingGCP.start_spray,
-                    sa_credentials=sa_credentials,
-                    function_name=function_name,
-                    args=pluginargs,
-                    item=item
-                )
-                '''
+                
+                #executor.submit(
+                #    credkingGCP.start_spray,
+                #    sa_credentials=sa_credentials,
+                #    function_name=function_name,
+                #    args=pluginargs,
+                #    item=item
+                #)
+                
         #q.task_done()
+    '''
 
     if gcp_enabled:
         for function_name in functions:
@@ -185,6 +193,20 @@ def main(args, pargs):
     if aws_enabled:
         # Remove AWS resources and build zips
         credkingAWS.clean_up(access_key, secret_access_key, only_lambdas=True)
+
+
+def start_spray(access_key, secret_access_key, args, sa_credentials, serverless):
+    while True:
+        item = q.get_nowait()
+
+        if item is None:
+            break
+        if str(serverless).startswith('arn'):
+            credkingAWS.start_spray(access_key=access_key, secret_access_key=secret_access_key, arn=serverless,
+                                    args=args, item=item)
+        else:
+            credkingGCP.start_spray(sa_credentials=sa_credentials, function_name=serverless, args=args, item=item)
+        q.task_done()
 
 
 def generate_random():
