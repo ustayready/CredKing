@@ -1,11 +1,12 @@
-import re, argparse, importlib
+import argparse
 import credkingGCP
 import credkingAWS
 import sys
 import datetime
 from concurrent.futures import ThreadPoolExecutor
-from threading import Lock, Thread
-import queue, random
+from threading import Lock
+import queue
+import random
 import math
 
 # GCP Locations
@@ -34,7 +35,6 @@ def main(args, pargs):
     plugin = args.plugin
     username_file = args.userfile
     password_file = args.passwordfile
-    user_agent_file = args.useragentfile
     environments = args.env
     gcp_enabled = False
     aws_enabled = False
@@ -67,7 +67,7 @@ def main(args, pargs):
             sys.exit(0)
 
     # Optional Fields
-    useragent_file = args.useragentfile
+    user_agent_file = args.useragentfile
 
     pluginargs = {}
     for i in range(0, len(pargs) - 1):
@@ -78,7 +78,7 @@ def main(args, pargs):
     log_entry(f"Execution started at: {start_time}")
 
     # Prepare credential combinations into the queue
-    load_credentials(username_file, password_file, useragent_file)
+    load_credentials(username_file, password_file, user_agent_file)
 
     threads = thread_count
     # TODO: Need to figure out how to do this dynamically
@@ -134,7 +134,6 @@ def main(args, pargs):
     with ThreadPoolExecutor(max_workers=len(serverlessList)) as executor:
         for serverless in serverlessList:
             log_entry(f'Launching spray {serverless}...')
-            # access_key, secret_access_key, args, sa_credentials, item, serverless
             executor.submit(start_spray,
                             access_key=access_key,
                             secret_access_key=secret_access_key,
@@ -142,47 +141,6 @@ def main(args, pargs):
                             sa_credentials=sa_credentials,
                             serverless=serverless
                             )
-
-    '''
-    #with ThreadPoolExecutor(max_workers=total_threads) as executor:
-    #while True:
-    for item in q.queue:
-        item = None
-        if q.empty():
-            break
-        else:
-            item = q.get()
-        if item is None:
-            break
-
-        for serverless in serverlessList:
-            if str(serverless).startswith('arn'):
-                log_entry('Launching spray using {}...'.format(serverless))
-                credkingAWS.start_spray(access_key=access_key,secret_access_key=secret_access_key,arn=serverless,args=pluginargs,item=item)
-                
-                #executor.submit(
-                #    credkingAWS.start_spray,
-                #    access_key=access_key,
-                #    secret_access_key=secret_access_key,
-                #    arn=arn,
-                #    args=pluginargs,
-                #    item=item
-                #)
-                
-            else:
-                log_entry('Launching spray using {}...'.format(serverless))
-                credkingGCP.start_spray(sa_credentials=sa_credentials,function_name=serverless,args=pluginargs,item=item)
-                
-                #executor.submit(
-                #    credkingGCP.start_spray,
-                #    sa_credentials=sa_credentials,
-                #    function_name=function_name,
-                #    args=pluginargs,
-                #    item=item
-                #)
-                
-        #q.task_done()
-    '''
 
     if gcp_enabled:
         for function_name in functions:
