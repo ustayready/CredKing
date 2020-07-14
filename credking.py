@@ -27,6 +27,9 @@ q = queue.Queue()
 
 _service_account_email = ""
 
+start_time = None
+end_time = None
+time_lapse = None
 
 def main(args, pargs):
     global start_time, end_time, time_lapse
@@ -132,6 +135,8 @@ def main(args, pargs):
         # Create lambdas based on thread count
         arns = credkingAWS.load_lambdas(access_key, secret_access_key, threads, zip_path)
 
+    display_stats()
+
     # Start Spray
     serverless_list = arns + functions
     with ThreadPoolExecutor(max_workers=len(serverless_list)) as executor:
@@ -145,6 +150,11 @@ def main(args, pargs):
                             serverless=serverless
                             )
 
+    # Capture duration
+    end_time = datetime.datetime.utcnow()
+    time_lapse = (end_time - start_time).total_seconds()
+
+    # Clean Up
     if gcp_enabled:
         for function_name in functions:
             credkingGCP.delete_function(service.projects().locations().functions(), function_name)
@@ -154,6 +164,25 @@ def main(args, pargs):
     if aws_enabled:
         # Remove AWS resources and build zips
         credkingAWS.clean_up(access_key, secret_access_key, only_lambdas=True)
+
+    display_stats(False)
+
+
+def display_stats(start=True):
+    if start:
+        '''
+        lambda_count = 0
+        for lc, val in lambda_clients.items():
+            if val:
+                lambda_count += 1
+        '''
+        log_entry('User/Password Combinations: {}'.format(len(credentials['accounts'])))
+        #log_entry('Total Regions Available: {}'.format(len(regions)))
+        #log_entry('Total Lambdas: {}'.format(lambda_count))
+
+    if end_time and not start:
+        log_entry('End Time: {}'.format(end_time))
+        log_entry('Total Execution: {} seconds'.format(time_lapse))
 
 
 def start_spray(access_key, secret_access_key, args, sa_credentials, serverless):
