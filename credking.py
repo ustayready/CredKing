@@ -44,7 +44,7 @@ def main(args, pargs):
     secret_access_key = None
 
     for env in environments:
-        if env == "aws":
+        if env == "gcp":
             # GCP Required Fields
             sa_file = args.sa_creds_file
             if sa_file is not None:
@@ -52,8 +52,8 @@ def main(args, pargs):
             else:
                 print("Field requirements are not met")
                 sys.exit(0)
-            aws_enabled = True
-        elif env == "gcp":
+            gcp_enabled = True
+        elif env == "aws":
             # AWS Required Fields
             access_key = args.access_key
             secret_access_key = args.secret_access_key
@@ -62,7 +62,7 @@ def main(args, pargs):
             else:
                 print("Field requirements are not met")
                 sys.exit(0)
-            gcp_enabled = True
+            aws_enabled = True
         else:
             print("Field requirements are not met")
             sys.exit(0)
@@ -89,14 +89,15 @@ def main(args, pargs):
     elif thread_count > len(credentials['accounts']):
         threads = len(credentials['accounts'])
 
-    print(math.floor(thread_count/len(environments)))
+    print(math.floor(thread_count / len(environments)))
     total_threads = threads
-    threads = math.floor(total_threads/len(environments))
+    threads = math.floor(total_threads / len(environments))
     log_entry(f"Number of threads per environment: {threads}")
 
     functions = []
     service = None
     bucket = None
+    sa_credentials = None
     if gcp_enabled:
         sa_credentials = credkingGCP.service_account.Credentials.from_service_account_file(sa_file)
         # TODO: Evaluate if this variable is needed
@@ -118,7 +119,8 @@ def main(args, pargs):
         source_url = credkingGCP.create_bucket(bucket, 'okta')
 
         locations = service.projects().locations()
-        functions = credkingGCP.create_functions(sa_credentials, locations, sa_credentials.project_id, source_url, threads)
+        functions = credkingGCP.create_functions(sa_credentials, locations, sa_credentials.project_id, source_url,
+                                                 threads)
 
         for x in functions:
             credkingGCP.check_function(locations.functions(), x)
@@ -131,9 +133,9 @@ def main(args, pargs):
         arns = credkingAWS.load_lambdas(access_key, secret_access_key, threads, zip_path)
 
     # Start Spray
-    serverlessList = arns + functions
-    with ThreadPoolExecutor(max_workers=len(serverlessList)) as executor:
-        for serverless in serverlessList:
+    serverless_list = arns + functions
+    with ThreadPoolExecutor(max_workers=len(serverless_list)) as executor:
+        for serverless in serverless_list:
             log_entry(f'Launching spray {serverless}...')
             executor.submit(start_spray,
                             access_key=access_key,
@@ -200,6 +202,7 @@ def load_credentials(user_file, password_file, useragent_file=None):
 
     for cred in credentials['accounts']:
         q.put(cred)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

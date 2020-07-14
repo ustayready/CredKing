@@ -5,6 +5,7 @@ from operator import itemgetter
 from threading import Lock, Thread
 import json, sys, random, string, ntpath, time, os, datetime, queue, shutil
 import boto3, argparse, importlib
+from credking_core import log_entry
 
 credentials = { 'accounts':[] }
 lambda_clients = {}
@@ -394,9 +395,9 @@ def invoke_lambda(access_key, secret_access_key, arn, payload):
 	if return_payload['success'] == True:
 		#clear_credentials(user, password)
 
-		print('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
+		log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
 	else:
-		print('(FAILED) {} / {} -> Failed.'.format(user, password))
+		log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
 
 
 def clean_up(access_key, secret_access_key, only_lambdas=True):

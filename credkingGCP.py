@@ -26,7 +26,6 @@ def main(args, pargs):
     password_file = args.passwordfile
     sa_file = args.sa_creds_file
     user_agent_file = args.useragentfile
-    print(args.env)
 
     pluginargs = {}
     for i in range(0, len(pargs) - 1):
@@ -108,7 +107,6 @@ def start_spray(sa_credentials, function_name, args, item):
     function = service.projects().locations().functions()
     if item is None:
         return
-    print(item)
 
     payload = {}
     payload['username'] = item['username']
@@ -199,7 +197,7 @@ def create_functions(sa_credentials, locations, project_id, source_url, thread_c
                 )
             )
     for x in function_names:
-        print(x.result())
+        log_entry(x.result())
     return [x.result() for x in function_names]
 
 
@@ -284,9 +282,9 @@ def invoke_function(function, function_name, payload):
     code_2fa = return_payload['code']
     if return_payload['success']:
         # clear_credentials(user, password)
-        print('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
+        log_entry('(SUCCESS) {} / {} -> Success! (2FA: {})'.format(user, password, code_2fa))
     else:
-        print('(FAILED) {} / {} -> Failed.'.format(user, password))
+        log_entry('(FAILED) {} / {} -> Failed.'.format(user, password))
 
 
 def delete_function(function, function_name):
