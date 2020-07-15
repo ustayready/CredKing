@@ -88,16 +88,21 @@ def main(args, pargs):
 
     threads = thread_count
     # TODO: Need to figure out how to do this dynamically
-    # TODO: Logic if there is also only one
     total_functions_available = len(location_names) + len(regions)
     if thread_count > total_functions_available:
         threads = len(total_functions_available)
     elif thread_count > len(credentials['accounts']):
         threads = len(credentials['accounts'])
 
-    print(math.floor(thread_count / len(environments)))
-    total_threads = threads
-    threads = math.floor(total_threads / len(environments))
+    total_threads = 0
+    if len(credentials['accounts']) == 1 and len(environments) > 1:
+        total_threads = 1
+        log_entry("Too many environments for only 1 credential")
+        sys.exit(0)
+    else:
+        print(math.floor(thread_count / len(environments)))
+        total_threads = threads
+        threads = math.floor(total_threads / len(environments))
     log_entry(f"Number of threads per environment: {threads}")
 
     functions = []
