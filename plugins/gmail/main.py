@@ -3,10 +3,27 @@ import datetime
 import mechanicalsoup
 import bs4
 import re
+import json
 
 
-def lambda_handler(event, context):
-	return google_authenticate(event['username'], event['password'], event['useragent'])
+def lambda_handler(event, context=None):
+	if isinstance(event,dict):
+		return google_authenticate(event['username'], event['password'], event['useragent'])
+	else:
+		request_json = event.get_json(silent=True)
+		request_args = event.args
+		if request_json and 'username' in request_json:
+			username = request_json['username']
+			password = request_json['password']
+			useragent = request_json['useragent']
+			return json.dumps(google_authenticate(username, password, useragent))
+		elif request_args and 'username' in request_args:
+			username = request_args['username']
+			password = request_args['password']
+			useragent = request_args['useragent']
+			return json.dumps(google_authenticate(username, password, useragent))
+		else:
+			return f'Error'
 
 
 def google_authenticate(username, password, useragent):
