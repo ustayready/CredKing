@@ -9,9 +9,9 @@ from threading import Lock, Thread
 import json, sys, random, string, ntpath, time, os, datetime, queue, shutil
 import re, argparse, importlib
 from credking_core import log_entry
+from credking_core import generate_random
 
 _service_account_email = ""
-credentials = {'accounts': []}
 
 lock = Lock()
 
@@ -88,13 +88,6 @@ def check_function(function, function_name):
             log_entry(f"Waiting {sleep} seconds for function to become ACTIVE")
             time.sleep(sleep)
     log_entry(f"Created Function: {function_name}")
-
-
-def generate_random():
-    seed = random.getrandbits(32)
-    while True:
-        yield seed
-        seed += 1
 
 
 def create_zip(plugin):

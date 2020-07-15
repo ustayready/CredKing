@@ -9,6 +9,7 @@ import queue
 import random
 import math
 from credking_core import log_entry
+from credking_core import generate_random
 
 # GCP Locations
 location_names = ["us-central1", "us-east1", "us-east4", "europe-west1", "asia-east2"]
@@ -30,6 +31,7 @@ _service_account_email = ""
 start_time = None
 end_time = None
 time_lapse = None
+
 
 def main(args, pargs):
     global start_time, end_time, time_lapse
@@ -86,6 +88,7 @@ def main(args, pargs):
 
     threads = thread_count
     # TODO: Need to figure out how to do this dynamically
+    # TODO: Logic if there is also only one
     total_functions_available = len(location_names) + len(regions)
     if thread_count > total_functions_available:
         threads = len(total_functions_available)
@@ -113,6 +116,7 @@ def main(args, pargs):
         # Creating a bucket
         bucket_name = f"credking_{next(generate_random())}"
         body = {'name': bucket_name}
+
         log_entry(storage_service.buckets().insert(project=sa_credentials.project_id, predefinedAcl="projectPrivate",
                                                    body=body).execute())
 
@@ -197,13 +201,6 @@ def start_spray(access_key, secret_access_key, args, sa_credentials, serverless)
         else:
             credkingGCP.start_spray(sa_credentials=sa_credentials, function_name=serverless, args=args, item=item)
         q.task_done()
-
-
-def generate_random():
-    seed = random.getrandbits(32)
-    while True:
-        yield seed
-        seed += 1
 
 
 def load_file(filename):

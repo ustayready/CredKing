@@ -6,10 +6,9 @@ from threading import Lock, Thread
 import json, sys, random, string, ntpath, time, os, datetime, queue, shutil
 import boto3, argparse, importlib
 from credking_core import log_entry
+from credking_core import generate_random
 
-credentials = {'accounts': []}
 lambda_clients = {}
-global_arns = {}
 regions = [
     'us-east-2', 'us-east-1', 'us-west-1', 'us-west-2', 'eu-west-3',
     'ap-northeast-1', 'ap-northeast-2', 'ap-south-1',
@@ -18,8 +17,6 @@ regions = [
 ]
 
 lock = Lock()
-
-threads = []
 
 
 def start_spray(access_key, secret_access_key, arn, args, item):
@@ -38,25 +35,6 @@ def start_spray(access_key, secret_access_key, arn, args, item):
         arn=arn,
         payload=payload,
     )
-
-
-def load_zips(thread_count):
-    if thread_count > len(regions):
-        thread_count = len(regions)
-
-    use_regions = []
-    for r in range(0, thread_count):
-        use_regions.append(regions[r])
-
-    with ThreadPoolExecutor(max_workers=thread_count) as executor:
-        for region in use_regions:
-            zip_list.add(
-                executor.submit(
-                    create_zip,
-                    plugin=plugin,
-                    region=region,
-                )
-            )
 
 
 def load_lambdas(access_key, secret_access_key, thread_count, zip_path):
@@ -83,13 +61,6 @@ def load_lambdas(access_key, secret_access_key, thread_count, zip_path):
     return [x.result() for x in arns]
 
 
-def generate_random():
-    seed = random.getrandbits(32)
-    while True:
-        yield seed
-        seed += 1
-
-
 def create_zip(plugin):
     plugin_path = 'plugins/{}/'.format(plugin)
     random_name = next(generate_random())
@@ -100,28 +71,6 @@ def create_zip(plugin):
         shutil.make_archive(build_zip[0:-4], 'zip', plugin_path)
 
     return build_zip
-
-
-def sorted_arns():
-    return sorted(
-        global_arns.items(),
-        key=itemgetter(1),
-        reverse=False
-    )
-
-
-def next_arn():
-    if len(global_arns.items()) > 0:
-        return sorted_arns()[0][0]
-
-
-def update_arns(region_name=None):
-    dt = datetime.datetime.now()
-    if not region_name:
-        for k, v in global_arns.items():
-            global_arns[k] = dt
-    else:
-        global_arns[region_name] = dt
 
 
 def init_client(service_type, access_key, secret_access_key, region_name):
