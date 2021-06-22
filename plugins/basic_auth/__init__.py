@@ -4,3 +4,5 @@ def validate(args):
     else:
         error = "Missing url argument, specify as --url http://host/login"
         return False, error
+    if 'tor' in args.keys():
+        return True, None
