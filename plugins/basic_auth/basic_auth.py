@@ -21,7 +21,7 @@ def setup_tor_proxy():
 
     tor_path = os.path.join(os.environ["LAMBDA_TASK_ROOT"], "tor")
     process = Popen([tor_path, "-f", tmp], cwd=os.path.dirname(data_dir), stdout=PIPE)
-    return process1
+    return process
 
 
 def cred_check(url, user, password, tor_enabled):
@@ -37,18 +37,19 @@ def cred_check(url, user, password, tor_enabled):
             result = requests.get(url, auth=HTTPBasicAuth(user, password), headers=headers)
         if result.status_code == 200:
             return True
+        if result.status_code == 401:
+            return False
 
 
-def basic_auth(url,user,password):
+def basic_auth(url,user,password, tor_enabled):
     data_response = {
-        'code': 'notset',
         'success': False,
         'url': url,
         'user': user,
         'password': password
     }
     try:
-        auth_check = cred_check(url, user, password)
+        auth_check = cred_check(url, user, password, tor_enabled)
         if auth_check:
             data_response['success'] = True
     except Exception as ex:
@@ -65,9 +66,10 @@ def lambda_handler(event, context):
 
     if tor_enabled == 1:
         process = setup_tor_proxy()
-        sleep(20)
+        sleep(30)
 
-    output = basic_auth(url, event['user'], event['password'], tor_enabled)
+    data_response = basic_auth(url, event['user'], event['password'], tor_enabled)
     if tor_enabled == 1:
         process.terminate()
-    return output
+    return data_response
+
