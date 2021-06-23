@@ -53,7 +53,7 @@ def basic_auth(url,user,password, tor_enabled):
         if auth_check:
             data_response['success'] = True
     except Exception as ex:
-        data_response['error'] = ex
+        data_response['error'] = str(ex)
         pass
     return data_response
 
@@ -68,7 +68,7 @@ def lambda_handler(event, context):
         process = setup_tor_proxy()
         sleep(30)
 
-    data_response = basic_auth(url, event['user'], event['password'], tor_enabled)
+    data_response = basic_auth(url, event['username'], event['password'], tor_enabled)
     if tor_enabled == 1:
         process.terminate()
     return data_response
