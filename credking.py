@@ -44,6 +44,7 @@ def main(args, pargs):
     access_key = args.access_key
     secret_access_key = args.secret_access_key
     useragent_file = args.useragentfile
+    lambda_timeout = args.timeout
 
     pluginargs = {}
     for i in range(0, len(pargs) - 1):
@@ -70,7 +71,7 @@ def main(args, pargs):
     zip_path = create_zip(plugin)
 
     # Create lambdas based on thread count
-    arns = load_lambdas(access_key, secret_access_key, thread_count, zip_path)
+    arns = load_lambdas(access_key, secret_access_key, thread_count, zip_path, lambda_timeout)
 
     # Print stats
     display_stats()
@@ -196,7 +197,7 @@ def load_zips(thread_count):
             )
 
 
-def load_lambdas(access_key, secret_access_key, thread_count, zip_path):
+def load_lambdas(access_key, secret_access_key, thread_count, zip_path, lambda_timeout):
     threads = thread_count
 
     if thread_count > len(regions):
@@ -215,6 +216,7 @@ def load_lambdas(access_key, secret_access_key, thread_count, zip_path):
                     access_key=access_key,
                     secret_access_key=secret_access_key,
                     region_idx=x,
+                    lambda_timeout=lambda_timeout,
                 )
             )
     return [x.result() for x in arns]
@@ -321,7 +323,7 @@ def create_role(access_key, secret_access_key, region_name):
     return role['Arn']
 
 
-def create_lambda(access_key, secret_access_key, zip_path, region_idx):
+def create_lambda(access_key, secret_access_key, zip_path, region_idx, lambda_timeout):
     region = regions[region_idx]
     head, tail = ntpath.split(zip_path)
     build_file = tail.split('.')[0]
@@ -347,7 +349,7 @@ def create_lambda(access_key, secret_access_key, zip_path, region_idx):
             Publish=True,
             Role=role_name,
             Runtime='python3.8',
-            Timeout=40,
+            Timeout=lambda_timeout,
             VpcConfig={
             },
         )
@@ -432,5 +434,6 @@ if __name__ == '__main__':
     parser.add_argument('--useragentfile', help='useragent file', required=False)
     parser.add_argument('--access_key', help='aws access key', required=True)
     parser.add_argument('--secret_access_key', help='aws secret access key', required=True)
+    parser.add_argument('--timeout', help='timeout for a lambda function (default: 8)', default=8, required=False)
     args, pluginargs = parser.parse_known_args()
     main(args, pluginargs)
