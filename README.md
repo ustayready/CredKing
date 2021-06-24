@@ -63,6 +63,7 @@ usage: **credking.py** \<usual arguments\> --host <teamserver_host> --port <team
 The basic auth plugin adds a new required argument called `url`. In addition, an optional argument called `tor` is added. If added, you MUST give credking the argument `--timeout 40`.
 
 usage: **credking.py** \<usual arguments\> --url <url_of_basic_auth>
+
 usage w/ tor: **credking.py** \<usual arguments\> --timeout 40 --url <url_of_basic_auth> --tor 1
 
 ## Installation ##
