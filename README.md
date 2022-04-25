@@ -29,7 +29,7 @@ Easily launch a password spray using AWS Lambda across multiple regions, rotatin
 usage: **credking.py** [-h] --plugin PLUGIN [--threads THREADS] --userfile
                    USERFILE --passwordfile PASSWORDFILE --access_key
                    ACCESS_KEY --secret_access_key SECRET_ACCESS_KEY
-                   [--useragentfile USERAGENTFILE]
+                   [--useragentfile USERAGENTFILE] [--timeout TIMEOUT]
 
 ```
 Arguments:
@@ -41,6 +41,7 @@ Arguments:
   --access_key ACCESS_KEY               aws access key
   --secret_access_key SECRET_ACCESS_KEY aws secret access key
   --useragentfile                       useragent file
+  --timeout                             timeout for a lambda function (default: 8)
 ```
 
 ## Plugin Usage ##
@@ -52,6 +53,18 @@ The Gmail plugin does not require any additional arguments.
 The Okta plugin adds a new required argument called oktadomain.
 
 usage: **credking.py** \<usual arugments\> --oktadomain org.okta.com
+
+### Cobalt Strike ###
+The Cobalt Strike plugin adds new required arguments called `port`, and `host`.
+
+usage: **credking.py** \<usual arguments\> --host <teamserver_host> --port <teamserver_port>
+
+### Basic Auth ###
+The basic auth plugin adds a new required argument called `url`. In addition, an optional argument called `tor` is added. If added, you MUST give credking the argument `--timeout 40`.
+
+usage: **credking.py** \<usual arguments\> --url <url_of_basic_auth>
+
+usage w/ tor: **credking.py** \<usual arguments\> --timeout 40 --url <url_of_basic_auth> --tor 1
 
 ## Installation ##
 
