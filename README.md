@@ -31,7 +31,7 @@ usage: **credking.py** [-h] --plugin PLUGIN [--threads THREADS] --userfile
                    ACCESS_KEY --secret_access_key SECRET_ACCESS_KEY
                    [--useragentfile USERAGENTFILE]
 
-```
+```https://www.instagram.com/3x______julfiii______1k?igsh=aDF4anJzYTJiZGY1
 Arguments:
   -h, --help                            show this help message and exit
   --plugin PLUGIN                       spraying plugin
